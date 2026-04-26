@@ -1,13 +1,7 @@
 package cinemaService
 
-import (
-	"context"
-	"net/http"
-)
+import "context"
 
-type Handler interface {
-	Test() http.HandlerFunc
-}
 
 type UseCase interface {
 	GetTestMessage(ctx context.Context) (string, error)
