@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	// "os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/usecase"
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/repository"
 	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinemaService/transport/http"
+
 )
 
 
@@ -46,16 +46,6 @@ func main() {
 		}
 	}()
 
-	// 1 способ
-	// quit := make(chan os.Signal, 1)
-	// signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	// <-quit
-	// log.Println("Получен сигнал завершения, выключаем сервер...")
-
-	// ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-	// defer cancel()
-
-	// 2 способ
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	<-ctx.Done()
