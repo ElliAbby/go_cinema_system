@@ -1,11 +1,18 @@
 package repository
 
-import "context"
+import (
+	"context"
 
-type repo struct {}
+	"github.com/jmoiron/sqlx"
 
-func New() *repo {
-	return &repo{}
+)
+
+type repo struct {
+	postgresDB *sqlx.DB
+}
+
+func New(postgresDB *sqlx.DB) *repo {
+	return &repo{postgresDB: postgresDB}
 }
 
 func (r *repo) GetTestMessage(ctx context.Context) (string, error) {

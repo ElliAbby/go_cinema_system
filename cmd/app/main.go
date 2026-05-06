@@ -12,14 +12,28 @@ import (
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/usecase"
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/repository"
 	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinemaService/transport/http"
+	"github.com/ElliAbby/go_cinema_system/internal/db/postgres"
+
 )
 
 
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Printf("Ошибка при загрузке конфигурации: %v", err)
+		return
+	}
 	log.Printf("Конфигурация сервера: %+v", cfg.Server)
 
-	repo := repository.New()
+	db, err := postgres.NewPostgresDB(&cfg.DB)
+	if err != nil {
+		log.Printf("Не удалось создать SQL-соединение: %v", err)
+		return
+	}
+	defer db.Close()
+	log.Printf("Конфигурация БД: %+v", cfg.DB)
+
+	repo := repository.New(db)
 	uc := usecase.New(repo)
 	handler := cinemaHttp.New(uc)
 
@@ -35,9 +49,9 @@ func main() {
 	mux.HandleFunc("/slow", handler.SlowEndpoint)
 
 	srv := &http.Server{
-		Addr: cfg.Server.Addr,
-		Handler: mux,
-		ReadTimeout: cfg.Server.ReadTimeout,
+		Addr:         cfg.Server.Addr,
+		Handler:      mux,
+		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
