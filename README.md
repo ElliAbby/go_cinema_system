@@ -112,6 +112,143 @@ docker compose down -v
 docker compose up --build
 ```
 
+Важно: если таблицы уже были созданы старой схемой, одного `docker compose up --build` недостаточно. Нужно удалить volume, чтобы Postgres выполнил init-скрипты заново.
+
+## API Documentation
+
+После запуска приложение предоставляет следующие API эндпоинты для работы с данными:
+
+### System Endpoints
+
+- `GET /` — стартовая страница с приветствием
+- `GET /health` — проверка здоровья приложения (проверяет БД)
+
+### Movies API
+
+- `GET /movies` — получить все фильмы
+- `POST /movies` — создать новый фильм
+  ```json
+  {
+    "title": "Interstellar",
+    "duration": 169,
+    "rating": "PG-13",
+    "description": "Epic sci-fi movie"
+  }
+  ```
+- `GET /movies/{id}` — получить фильм по ID
+- `PUT /movies/{id}` — обновить фильм
+- `DELETE /movies/{id}` — удалить фильм
+
+### Cinemas API
+
+- `GET /cinemas` — получить все кинотеатры
+- `POST /cinemas` — создать новый кинотеатр
+  ```json
+  {
+    "name": "Киносинема",
+    "address": "ул. Пушкина, 10"
+  }
+  ```
+- `GET /cinemas/{id}` — получить кинотеатр по ID
+
+### Halls API
+
+- `GET /cinemas/{cinemaId}/halls` — получить все залы в кинотеатре
+
+### Sessions API
+
+- `GET /sessions` — получить все сеансы
+- `POST /sessions` — создать новый сеанс
+  ```json
+  {
+    "movie_id": 1,
+    "hall_id": 1,
+    "start_time": "2026-05-10T18:00:00Z",
+    "price_base": 250.0
+  }
+  ```
+- `GET /sessions/{id}` — получить сеанс по ID
+- `GET /movies/{movieId}/sessions` — получить все сеансы для фильма
+
+### Примеры использования
+
+#### Создать фильм
+
+```bash
+curl -X POST http://localhost:8080/movies \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "The Matrix",
+    "duration": 136,
+    "rating": "R",
+    "description": "A computer programmer discovers the true nature of his reality"
+  }'
+```
+
+#### Получить все фильмы
+
+```bash
+curl http://localhost:8080/movies
+```
+
+#### Получить фильм по ID
+
+```bash
+curl http://localhost:8080/movies/1
+```
+
+#### Создать кинотеатр
+
+```bash
+curl -X POST http://localhost:8080/cinemas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Киносинема Центр",
+    "address": "Красная площадь, 1"
+  }'
+```
+
+#### Создать сеанс фильма
+
+```bash
+curl -X POST http://localhost:8080/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "movie_id": 1,
+    "hall_id": 1,
+    "start_time": "2026-05-10T19:00:00Z",
+    "price_base": 300
+  }'
+```
+
+#### Проверить здоровье приложения
+
+```bash
+curl http://localhost:8080/health
+```
+
+### Error Handling
+
+Приложение возвращает структурированные JSON ошибки:
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "movie not found",
+    "status": 404
+  }
+}
+```
+
+Коды ошибок:
+
+- `NOT_FOUND` (404) — ресурс не найден
+- `INVALID_INPUT` (400) — неверные данные
+- `CONFLICT` (409) — ресурс уже существует
+- `DATABASE_ERROR` (500) — ошибка базы данных
+- `INTERNAL_ERROR` (500) — внутренняя ошибка сервера
+
 ## Что делает приложение
 
 - `GET /` — простая стартовая страница.

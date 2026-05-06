@@ -2,23 +2,239 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
+
+	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
 
 )
 
 type repo struct {
-	postgresDB *sqlx.DB
+ 	postgresDB *sqlx.DB
 }
 
 func New(postgresDB *sqlx.DB) *repo {
 	return &repo{postgresDB: postgresDB}
 }
 
+// Работа с фильмами
+func (r *repo) GetAllMovies(ctx context.Context) ([]cinemaService.Movie, error) {
+	var movies []cinemaService.Movie
+	query := `SELECT id, title, duration, rating, description FROM movies ORDER BY id`
+	err := r.postgresDB.SelectContext(ctx, &movies, query)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return movies, nil
+}
+
+func (r *repo) GetMovieByID(ctx context.Context, id int) (*cinemaService.Movie, error) {
+	var movie cinemaService.Movie
+	query := `SELECT id, title, duration, rating, description FROM movies WHERE id = $1`
+	err := r.postgresDB.GetContext(ctx, &movie, query, id)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("movie")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &movie, nil
+}
+
+func (r *repo) CreateMovie(ctx context.Context, movie *cinemaService.Movie) (int, error) {
+	var id int
+	query := `INSERT INTO movies (title, duration, rating, description) VALUES ($1, $2, $3, $4) RETURNING id`
+	err := r.postgresDB.QueryRowContext(ctx, query, movie.Title, movie.Duration, movie.Rating, movie.Description).Scan(&id)
+	if err != nil {
+		return 0, cinemaService.NewDatabaseError(err.Error())
+	}
+	return id, nil
+}
+
+func (r *repo) UpdateMovie(ctx context.Context, movie *cinemaService.Movie) error {
+	query := `UPDATE movies SET title = $1, duration = $2, rating = $3, description = $4 WHERE id = $5`
+	result, err := r.postgresDB.ExecContext(ctx, query, movie.Title, movie.Duration, movie.Rating, movie.Description, movie.ID)
+	if err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	if rowsAffected == 0 {
+		return cinemaService.NewNotFoundError("movie")
+	}
+	return nil
+}
+
+func (r *repo) DeleteMovie(ctx context.Context, id int) error {
+	query := `DELETE FROM movies WHERE id = $1`
+	result, err := r.postgresDB.ExecContext(ctx, query, id)
+	if err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	if rowsAffected == 0 {
+		return cinemaService.NewNotFoundError("movie")
+	}
+	return nil
+}
+
+// Работа с кинотеатрами
+func (r *repo) GetAllCinemas(ctx context.Context) ([]cinemaService.Cinema, error) {
+	var cinemas []cinemaService.Cinema
+	query := `SELECT id, name, address FROM cinemas ORDER BY id`
+	err := r.postgresDB.SelectContext(ctx, &cinemas, query)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return cinemas, nil
+}
+
+func (r *repo) GetCinemaByID(ctx context.Context, id int) (*cinemaService.Cinema, error) {
+	var cinema cinemaService.Cinema
+	query := `SELECT id, name, address FROM cinemas WHERE id = $1`
+	err := r.postgresDB.GetContext(ctx, &cinema, query, id)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("cinema")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &cinema, nil
+}
+
+func (r *repo) CreateCinema(ctx context.Context, cinema *cinemaService.Cinema) (int, error) {
+	var id int
+	query := `INSERT INTO cinemas (name, address) VALUES ($1, $2) RETURNING id`
+	err := r.postgresDB.QueryRowContext(ctx, query, cinema.Name, cinema.Address).Scan(&id)
+	if err != nil {
+		return 0, cinemaService.NewDatabaseError(err.Error())
+	}
+	return id, nil
+}
+
+// Работа с залами
+func (r *repo) GetHallsByCinema(ctx context.Context, cinemaID int) ([]cinemaService.Hall, error) {
+	var halls []cinemaService.Hall
+	query := `SELECT id, cinema_id, name, hall_type FROM halls WHERE cinema_id = $1 ORDER BY id`
+	err := r.postgresDB.SelectContext(ctx, &halls, query, cinemaID)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return halls, nil
+}
+
+func (r *repo) GetHallByID(ctx context.Context, id int) (*cinemaService.Hall, error) {
+	var hall cinemaService.Hall
+	query := `SELECT id, cinema_id, name, hall_type FROM halls WHERE id = $1`
+	err := r.postgresDB.GetContext(ctx, &hall, query, id)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("hall")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &hall, nil
+}
+
+func (r *repo) CreateHall(ctx context.Context, hall *cinemaService.Hall) (int, error) {
+	var id int
+	query := `INSERT INTO halls (cinema_id, name, hall_type) VALUES ($1, $2, $3) RETURNING id`
+	err := r.postgresDB.QueryRowContext(ctx, query, hall.CinemaID, hall.Name, hall.HallType).Scan(&id)
+	if err != nil {
+		return 0, cinemaService.NewDatabaseError(err.Error())
+	}
+	return id, nil
+}
+
+// Работа с сесссиями
+func (r *repo) GetAllSessions(ctx context.Context) ([]cinemaService.Session, error) {
+	var sessions []cinemaService.Session
+	query := `SELECT id, movie_id, hall_id, start_time, price_base FROM sessions ORDER BY start_time`
+	err := r.postgresDB.SelectContext(ctx, &sessions, query)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return sessions, nil
+}
+
+func (r *repo) GetSessionByID(ctx context.Context, id int) (*cinemaService.Session, error) {
+	var session cinemaService.Session
+	query := `SELECT id, movie_id, hall_id, start_time, price_base FROM sessions WHERE id = $1`
+	err := r.postgresDB.GetContext(ctx, &session, query, id)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("session")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &session, nil
+}
+
+func (r *repo) GetSessionsByMovie(ctx context.Context, movieID int) ([]cinemaService.Session, error) {
+	var sessions []cinemaService.Session
+	query := `SELECT id, movie_id, hall_id, start_time, price_base FROM sessions WHERE movie_id = $1 ORDER BY start_time`
+	err := r.postgresDB.SelectContext(ctx, &sessions, query, movieID)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return sessions, nil
+}
+
+func (r *repo) GetSessionsByHall(ctx context.Context, hallID int) ([]cinemaService.Session, error) {
+	var sessions []cinemaService.Session
+	query := `SELECT id, movie_id, hall_id, start_time, price_base FROM sessions WHERE hall_id = $1 ORDER BY start_time`
+	err := r.postgresDB.SelectContext(ctx, &sessions, query, hallID)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return sessions, nil
+}
+
+func (r *repo) CreateSession(ctx context.Context, session *cinemaService.Session) (int, error) {
+	var id int
+	query := `INSERT INTO sessions (movie_id, hall_id, start_time, price_base) VALUES ($1, $2, $3, $4) RETURNING id`
+	err := r.postgresDB.QueryRowContext(ctx, query, session.MovieID, session.HallID, session.StartTime, session.PriceBase).Scan(&id)
+	if err != nil {
+		return 0, cinemaService.NewDatabaseError(err.Error())
+	}
+	return id, nil
+}
+
+// Работа с местами
+func (r *repo) GetSeatsByHall(ctx context.Context, hallID int) ([]cinemaService.Seat, error) {
+	var seats []cinemaService.Seat
+	query := `SELECT id, hall_id, row_number, seat_number, seat_type FROM seats WHERE hall_id = $1 ORDER BY row_number, seat_number`
+	err := r.postgresDB.SelectContext(ctx, &seats, query, hallID)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return seats, nil
+}
+
+func (r *repo) GetSeatByID(ctx context.Context, id int) (*cinemaService.Seat, error) {
+	var seat cinemaService.Seat
+	query := `SELECT id, hall_id, row_number, seat_number, seat_type FROM seats WHERE id = $1`
+	err := r.postgresDB.GetContext(ctx, &seat, query, id)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("seat")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &seat, nil
+}
+
+// Тестовые методы
 func (r *repo) GetTestMessage(ctx context.Context) (string, error) {
-	return "Hello!", nil
+	return "Hello from Database!", nil
 }
 
 func (r *repo) GetSlowMessage(ctx context.Context) (string, error) {
-	return "Slooooow text", nil
+	return "Slooooow text from Database", nil
 }
