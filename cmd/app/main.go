@@ -7,16 +7,18 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/ElliAbby/go_cinema_system/internal/config"
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/usecase"
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/repository"
 	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinemaService/transport/http"
-
 )
 
 
 func main() {
+	cfg := config.Load()
+	log.Printf("Конфигурация сервера: %+v", cfg.Server)
+
 	repo := repository.New()
 	uc := usecase.New(repo)
 	handler := cinemaHttp.New(uc)
@@ -33,10 +35,10 @@ func main() {
 	mux.HandleFunc("/slow", handler.SlowEndpoint)
 
 	srv := &http.Server{
-		Addr: ":8080",
+		Addr: cfg.Server.Addr,
 		Handler: mux,
-		ReadTimeout: 10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout: cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
 	go func() {
@@ -53,7 +55,7 @@ func main() {
 	// для двойного Ctrl+C
 	stop()
 
-	shutDownCtx, cancel := context.WithTimeout(context.Background(), 15 * time.Second)
+	shutDownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(shutDownCtx); err != nil {

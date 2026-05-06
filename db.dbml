@@ -1,0 +1,75 @@
+// Проект: Платформа продажи билетов в кинотеатре
+
+Table Cinemas {
+  id integer [primary key]
+  name varchar
+  address text
+}
+
+Table Halls {
+  id integer [primary key]
+  cinema_id integer [ref: > Cinemas.id]
+  name varchar
+  hall_type varchar // стандарт, VIP, IMAX
+}
+
+Table Seats {
+  id integer [primary key]
+  hall_id integer [ref: > Halls.id]
+  row_number integer
+  seat_number integer
+  seat_type varchar // обычное, диван, для инвалидов
+}
+
+Table Movies {
+  id integer [primary key]
+  title varchar
+  duration integer // длительность в минутах
+  rating varchar // PG-13, R, и т.д.
+  description text
+}
+
+Table Sessions {
+  id integer [primary key]
+  movie_id integer [ref: > Movies.id]
+  hall_id integer [ref: > Halls.id]
+  start_time timestamp
+  price_base decimal
+}
+
+Table Users {
+  id integer [primary key]
+  email varchar [unique]
+  password_hash varchar
+  phone varchar
+  is_active bool
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table Bookings {
+  id uuid [primary key]
+  user_id integer [ref: > Users.id]
+  total_price decimal
+  status varchar // pending, paid, cancelled, refunded
+  created_at timestamp
+}
+
+Table Tickets {
+  id uuid [primary key]
+  session_id integer [ref: > Sessions.id]
+  seat_id integer [ref: > Seats.id]
+  booking_id uuid [ref: > Bookings.id]
+  status varchar // active, used, refunded
+}
+
+Table Reservations {
+  seat_id integer [ref: > Seats.id]
+  session_id integer [ref: > Sessions.id]
+  user_id integer [ref: > Users.id]
+  locked_until timestamp
+  
+  indexes {
+    (seat_id, session_id) [pk] // Составной первичный ключ
+  }
+}
