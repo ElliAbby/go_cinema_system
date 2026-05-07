@@ -170,6 +170,71 @@ docker compose up --build
 - `GET /sessions/{id}` — получить сеанс по ID
 - `GET /movies/{movieId}/sessions` — получить все сеансы для фильма
 
+### Authentication API
+
+Приложение использует JWT токены для авторизации.
+
+#### Register (Регистрация)
+
+- `POST /auth/register`
+
+```bash
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123",
+    "phone": "+7 999 123 45 67"
+  }'
+```
+
+Response:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user_id": 1,
+  "email": "user@example.com",
+  "expires_at": 1715461234
+}
+```
+
+#### Login (Вход)
+
+- `POST /auth/login`
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+```
+
+Есть также защищённые эндпоинты, которые требуют авторизации.
+
+Используйте полученный токен в заголовке Authorization:
+
+```bash
+curl -X POST http://localhost:8080/bookings \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": 1,
+    "seats": [1, 2, 3]
+  }'
+```
+
+Если токен истёк или неверный, получите 401 ответ:
+
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "Invalid or expired token"
+}
+```
+
 ### Примеры использования
 
 #### Создать фильм

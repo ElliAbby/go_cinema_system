@@ -2,8 +2,11 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
+	"github.com/ElliAbby/go_cinema_system/internal/jwt"
+  "github.com/ElliAbby/go_cinema_system/internal/security"
 
 )
 
@@ -156,6 +159,78 @@ func (uc *useCase) CreateSession(ctx context.Context, req *cinemaService.CreateS
 		PriceBase: req.PriceBase,
 	}
 	return uc.repo.CreateSession(ctx, session)
+}
+
+// Auth методы
+func (uc *useCase) Register(ctx context.Context, req *cinemaService.RegisterRequest) (*cinemaService.AuthResponse, error) {
+	if req == nil || req.Email == "" || req.Password == "" {
+		return nil, cinemaService.ErrInvalidInput
+	}
+
+	existing, _ := uc.repo.GetUserByEmail(ctx, req.Email)
+	if existing != nil {
+		return nil, cinemaService.ErrEmailAlreadyExists
+	}
+
+	hashedPassword, err := security.HashPassword(req.Password)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError("failed to hash password")
+	}
+
+	user := &cinemaService.User{
+		Email:    req.Email,
+		PasswordHash: hashedPassword,
+		Phone:    req.Phone,
+		IsActive: true,	
+	}
+
+	userID, err := uc.repo.CreateUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := jwt.GenerateToken(userID, user.Email)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError("failed to generate token")
+	}
+
+	return &cinemaService.AuthResponse{
+		Token: token,
+		UserID: userID,
+		Email: req.Email,
+		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
+	}, nil
+}
+
+func (uc *useCase) Login(ctx context.Context, req *cinemaService.LoginRequest) (*cinemaService.AuthResponse, error) {
+	if req == nil || req.Email == "" || req.Password == "" {
+		return nil, cinemaService.ErrInvalidInput
+	}
+
+	user, err := uc.repo.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, cinemaService.NewNotFoundError("user")
+	}
+
+	if !security.VerifyPassword(user.PasswordHash, req.Password) {
+		return nil, cinemaService.AppError{
+            Code:    "INVALID_CREDENTIALS",
+            Message: "Invalid email or password",
+            Status:  401,
+        }
+	}
+
+	token, err := jwt.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError("failed to generate token")
+	}
+
+	return &cinemaService.AuthResponse{
+		Token: token,
+		UserID: user.ID,
+		Email: user.Email,
+		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
+		}, nil
 }
 
 // Тестовые методы

@@ -230,6 +230,44 @@ func (r *repo) GetSeatByID(ctx context.Context, id int) (*cinemaService.Seat, er
 	return &seat, nil
 }
 
+// Auth методы
+func (r *repo) CreateUser(ctx context.Context, user *cinemaService.User) (int, error) {
+	var id int
+	query := `INSERT INTO users (email, password_hash, phone, is_active, created_at, updated_at) 
+              VALUES ($1, $2, $3, true, NOW(), NOW()) RETURNING id`
+	err := r.postgresDB.QueryRowContext(ctx, query, user.Email, user.PasswordHash, user.Phone).Scan(&id)
+	if err != nil {
+		return 0, cinemaService.NewDatabaseError(err.Error())
+	}
+	return id, nil
+}
+
+func (r *repo) GetUserByEmail(ctx context.Context, email string) (*cinemaService.User, error) {
+	var user cinemaService.User
+	query := `SELECT id, email, password_hash, phone, is_active, created_at, updated_at FROM users WHERE email = $1`
+	err := r.postgresDB.GetContext(ctx, &user, query, email)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("user")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &user, nil
+}
+
+func (r *repo) GetUserByID(ctx context.Context, id int) (*cinemaService.User, error) {
+	var user cinemaService.User
+	query := `SELECT id, email, password_hash, phone, is_active, created_at, updated_at FROM users WHERE id = $1`
+	err := r.postgresDB.GetContext(ctx, &user, query, id)
+	if err == sql.ErrNoRows {
+		return nil, cinemaService.NewNotFoundError("user")
+	}
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &user, nil
+}
+
 // Тестовые методы
 func (r *repo) GetTestMessage(ctx context.Context) (string, error) {
 	return "Hello from Database!", nil

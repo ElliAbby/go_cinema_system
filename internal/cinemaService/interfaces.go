@@ -32,6 +32,11 @@ type Repository interface {
 	GetSeatsByHall(ctx context.Context, hallID int) ([]Seat, error)
 	GetSeatByID(ctx context.Context, id int) (*Seat, error)
 
+	// Aurh методы
+	CreateUser(ctx context.Context, user *User) (int, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByID(ctx context.Context, id int) (*User, error)
+
 	// Тестовые методы
 	GetTestMessage(ctx context.Context) (string, error)
 	GetSlowMessage(ctx context.Context) (string, error)
@@ -59,6 +64,10 @@ type UseCase interface {
 	GetSessionByID(ctx context.Context, id int) (*Session, error)
 	GetSessionsByMovie(ctx context.Context, movieID int) ([]Session, error)
 	CreateSession(ctx context.Context, req *CreateSessionRequest) (int, error)
+
+	// Auth методы
+	Register(ctx context.Context, req *RegisterRequest) (*AuthResponse, error)
+	Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error)
 
 	// Тестовые методы
 	GetTestMessage(ctx context.Context) (string, error)

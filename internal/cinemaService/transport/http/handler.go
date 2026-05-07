@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
 
 )
@@ -35,7 +37,7 @@ func respondError(w http.ResponseWriter, err interface{}, status int) {
 }
 
 func getIDFromURL(r *http.Request, paramName string) (int, error) {
-	idStr := r.PathValue(paramName)
+	idStr := chi.URLParam(r, paramName)
 	return strconv.Atoi(idStr)
 }
 
@@ -276,6 +278,46 @@ func (h *handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, map[string]int{"id": id}, http.StatusCreated)
+}
+
+// Auth middleware
+func (h *handler) Register(w http.ResponseWriter, r *http.Request) {
+	var req cinemaService.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, cinemaService.ErrInvalidInput, 400)
+		return
+	}
+
+	resp, err := h.uc.Register(r.Context(), &req)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+	respondJSON(w, resp, http.StatusOK)
+}
+
+func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
+	var req cinemaService.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, cinemaService.ErrInvalidInput, 400)
+		return
+	}
+
+	resp, err := h.uc.Login(r.Context(), &req)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, resp, http.StatusOK)
 }
 
 // Тестовые эндпоинты

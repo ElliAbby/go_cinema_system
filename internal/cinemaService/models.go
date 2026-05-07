@@ -94,3 +94,22 @@ type CreateSessionRequest struct {
 	StartTime time.Time `json:"start_time" binding:"required"`
 	PriceBase float64   `json:"price_base" binding:"required,min=0"`
 }
+
+// Модели для работы с авторизацией и аутентификацией
+type RegisterRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8"`
+	Phone string `json:"phone"`
+}
+
+type LoginRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+type AuthResponse struct {
+	Token string `json:"token"`
+	UserID  int   `json:"user_id"`
+	Email string `json:"email"`
+	ExpiresAt int64 `json:"expires_at"`
+}

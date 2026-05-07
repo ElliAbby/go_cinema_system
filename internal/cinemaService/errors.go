@@ -35,6 +35,11 @@ var (
 		Message: "Internal server error",
 		Status:  500,
 	}
+	ErrEmailAlreadyExists = AppError{
+		Code:    "USER_EXISTS",
+		Message: "ser with this email already exists",
+		Status:  409,
+	}
 )
 
 // NewNotFoundError возвращает ошибку NotFound с кастомным сообщением
