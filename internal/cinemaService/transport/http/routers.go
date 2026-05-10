@@ -10,6 +10,8 @@ import (
 func RegisterRouters(h *handler) http.Handler {
     r := chi.NewRouter()
 
+	r.Use(metricsMiddleware)
+
     // Root
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
@@ -21,6 +23,9 @@ func RegisterRouters(h *handler) http.Handler {
         w.Header().Set("Content-Type", "application/json")
         w.Write([]byte(`{"status":"healthy"}`))
     })
+
+	// Metrics
+	r.Handle("/metrics", metricsHandler())
 
     // Auth
     r.Post("/auth/register", h.Register)

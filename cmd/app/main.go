@@ -14,7 +14,7 @@ import (
 	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinemaService/transport/http"
 	"github.com/ElliAbby/go_cinema_system/internal/db/postgres"
 	"github.com/ElliAbby/go_cinema_system/internal/jwt"
-
+	"github.com/ElliAbby/go_cinema_system/internal/metrics"
 )
 
 
@@ -27,6 +27,8 @@ func main() {
 	log.Printf("Конфигурация сервера: %+v", cfg.Server)
 
 	jwt.Init(cfg.JWT.SecretKey)
+	metrics.InitMetrics()
+	log.Println("Метрики инициализированы")
 
 	db, err := postgres.NewPostgresDB(&cfg.DB)
 	if err != nil {

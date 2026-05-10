@@ -6,8 +6,8 @@ import (
 
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
 	"github.com/ElliAbby/go_cinema_system/internal/jwt"
-  "github.com/ElliAbby/go_cinema_system/internal/security"
-
+  	"github.com/ElliAbby/go_cinema_system/internal/security"
+	"github.com/ElliAbby/go_cinema_system/internal/metrics"
 )
 
 type useCase struct {
@@ -199,24 +199,35 @@ func (uc *useCase) CreateBooking(ctx context.Context, userID int, req *cinemaSer
 
 	booking, err := uc.repo.CreateBooking(ctx, userID, req)
 	if err != nil {
+		metrics.IncBookingErrors("create_booking_failed")
 		return nil, err
 	}
 
 	booking.ExpiresAt = booking.CreatedAt.Add(reservationHoldDuration)
 	booking.SeatIDs = append([]int(nil), req.SeatIDs...)
+	metrics.IncActiveBookings()
+
 	return booking, nil
 }
 
 func (uc *useCase) PurchaseBooking(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, []cinemaService.Ticket, error) {
+	startPayment := time.Now()
+	defer func() {
+		metrics.ObservePaymentDuration(time.Since(startPayment).Seconds())
+	}()
+
 	if userID <= 0 {
+		metrics.IncBookingErrors("invalid_user_id")
 		return nil, nil, cinemaService.NewValidationError("user id")
 	}
 	if bookingID == "" {
+		metrics.IncBookingErrors("empty_booking_id")
 		return nil, nil, cinemaService.NewValidationError("booking id")
 	}
 
 	booking, tickets, err := uc.repo.PurchaseBooking(ctx, userID, bookingID)
 	if err != nil {
+		metrics.IncBookingErrors("purchase_booking_failed")
 		return nil, nil, err
 	}
 
@@ -226,6 +237,10 @@ func (uc *useCase) PurchaseBooking(ctx context.Context, userID int, bookingID st
 			booking.SeatIDs = append(booking.SeatIDs, ticket.SeatID)
 		}
 	}
+
+	metrics.DecActiveBookings()           // Уменьшаем активные бронирования
+    metrics.AddRevenue(booking.TotalPrice)
+	metrics.AddTicketsSold(float64(len(tickets)))
 
 	return booking, tickets, nil
 }

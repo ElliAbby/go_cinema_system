@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
+	"github.com/ElliAbby/go_cinema_system/internal/metrics"
 
 )
 
@@ -294,6 +295,7 @@ func (h *handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 
 	var req cinemaService.CreateBookingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		metrics.IncBookingErrors("invalid_request")
 		respondError(w, cinemaService.ErrInvalidInput, 400)
 		return
 	}
@@ -324,6 +326,8 @@ func (h *handler) PurchaseBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	startPayment := time.Now()
+
 	booking, tickets, err := h.uc.PurchaseBooking(r.Context(), userID, bookingID)
 	if err != nil {
 		if appErr, ok := err.(cinemaService.AppError); ok {
@@ -333,6 +337,8 @@ func (h *handler) PurchaseBooking(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	metrics.ObservePaymentDuration(time.Since(startPayment).Seconds())
 
 	respondJSON(w, map[string]interface{}{
 		"booking": booking,
