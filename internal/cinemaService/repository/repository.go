@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
 
@@ -206,6 +208,156 @@ func (r *repo) CreateSession(ctx context.Context, session *cinemaService.Session
 	return id, nil
 }
 
+// Бронирование и покупка билетов
+func (r *repo) CreateBooking(ctx context.Context, userID int, req *cinemaService.CreateBookingRequest) (*cinemaService.Booking, error) {
+	tx, err := r.postgresDB.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	var session cinemaService.Session
+	sessionQuery := `SELECT id, movie_id, hall_id, start_time, price_base FROM sessions WHERE id = $1 FOR UPDATE`
+	if err := tx.GetContext(ctx, &session, sessionQuery, req.SessionID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, cinemaService.NewNotFoundError("session")
+		}
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
+	seatsQuery := `SELECT id, hall_id, row_number, seat_number, seat_type FROM seats WHERE id = ANY($1)`
+	var seats []cinemaService.Seat
+	if err := tx.SelectContext(ctx, &seats, seatsQuery, pq.Array(req.SeatIDs)); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	if len(seats) != len(req.SeatIDs) {
+		return nil, cinemaService.NewValidationError("seat ids")
+	}
+	for _, seat := range seats {
+		if seat.HallID != session.HallID {
+			return nil, cinemaService.NewConflictError("one or more seats do not belong to this session hall")
+		}
+	}
+
+	deleteExpiredQuery := `DELETE FROM reservations WHERE session_id = $1 AND seat_id = ANY($2) AND locked_until < NOW()`
+	if _, err := tx.ExecContext(ctx, deleteExpiredQuery, req.SessionID, pq.Array(req.SeatIDs)); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
+	totalPrice := session.PriceBase * float64(len(req.SeatIDs))
+	var booking cinemaService.Booking
+	bookingQuery := `INSERT INTO bookings (user_id, total_price, status, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, created_at`
+	if err := tx.QueryRowContext(ctx, bookingQuery, userID, totalPrice, "pending").Scan(&booking.ID, &booking.CreatedAt); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
+	lockedUntil := time.Now().Add(15 * time.Minute)
+	reservationQuery := `INSERT INTO reservations (seat_id, session_id, user_id, booking_id, locked_until) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (seat_id, session_id) DO NOTHING RETURNING seat_id`
+	for _, seatID := range req.SeatIDs {
+		var insertedSeatID int
+		if err := tx.QueryRowContext(ctx, reservationQuery, seatID, req.SessionID, userID, booking.ID, lockedUntil).Scan(&insertedSeatID); err != nil {
+			if err == sql.ErrNoRows {
+				return nil, cinemaService.NewConflictError("one or more seats are already reserved")
+			}
+			return nil, cinemaService.NewDatabaseError(err.Error())
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
+	booking.UserID = userID
+	booking.TotalPrice = totalPrice
+	booking.Status = "pending"
+	booking.SeatIDs = append([]int(nil), req.SeatIDs...)
+	booking.ExpiresAt = lockedUntil
+	return &booking, nil
+}
+
+func (r *repo) PurchaseBooking(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, []cinemaService.Ticket, error) {
+	tx, err := r.postgresDB.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	var booking cinemaService.Booking
+	bookingQuery := `SELECT id, user_id, total_price, status, created_at FROM bookings WHERE id = $1 AND user_id = $2 FOR UPDATE`
+	if err := tx.GetContext(ctx, &booking, bookingQuery, bookingID, userID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, cinemaService.NewNotFoundError("booking")
+		}
+		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	if booking.Status != "pending" {
+		return nil, nil, cinemaService.NewConflictError("booking is not available for payment")
+	}
+
+	var reservations []cinemaService.Reservation
+	reservationQuery := `SELECT seat_id, session_id, user_id, booking_id, locked_until FROM reservations WHERE booking_id = $1 FOR UPDATE`
+	if err := tx.SelectContext(ctx, &reservations, reservationQuery, bookingID); err != nil {
+		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	if len(reservations) == 0 {
+		return nil, nil, cinemaService.NewConflictError("booking has no active reservations")
+	}
+	for _, reservation := range reservations {
+		if time.Now().After(reservation.LockedUntil) {
+			return nil, nil, cinemaService.NewConflictError("booking reservation has expired")
+		}
+	}
+
+	tickets := make([]cinemaService.Ticket, 0, len(reservations))
+	ticketQuery := `INSERT INTO tickets (session_id, seat_id, booking_id, status) VALUES ($1, $2, $3, $4) ON CONFLICT (session_id, seat_id) DO NOTHING RETURNING id`
+	for _, reservation := range reservations {
+		var ticket cinemaService.Ticket
+		ticket.SessionID = reservation.SessionID
+		ticket.SeatID = reservation.SeatID
+		ticket.BookingID = bookingID
+		ticket.Status = "active"
+		if err := tx.QueryRowContext(ctx, ticketQuery, reservation.SessionID, reservation.SeatID, bookingID, ticket.Status).Scan(&ticket.ID); err != nil {
+			if err == sql.ErrNoRows {
+				return nil, nil, cinemaService.NewConflictError("one or more tickets already exist")
+			}
+			return nil, nil, cinemaService.NewDatabaseError(err.Error())
+		}
+		tickets = append(tickets, ticket)
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, "paid", bookingID); err != nil {
+		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM reservations WHERE booking_id = $1`, bookingID); err != nil {
+		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
+	booking.Status = "paid"
+	booking.SeatIDs = make([]int, 0, len(tickets))
+	for _, ticket := range tickets {
+		booking.SeatIDs = append(booking.SeatIDs, ticket.SeatID)
+	}
+	return &booking, tickets, nil
+}
+
+func (r *repo) GetAllMyBookings(ctx context.Context, userID int) ([]cinemaService.Booking, error) {
+	var bookings []cinemaService.Booking
+	query := `SELECT id, user_id, total_price, status, created_at FROM bookings WHERE user_id = $1 ORDER BY created_at DESC`
+	err := r.postgresDB.SelectContext(ctx, &bookings, query, userID)
+	if err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return bookings, nil
+}
+
 // Работа с местами
 func (r *repo) GetSeatsByHall(ctx context.Context, hallID int) ([]cinemaService.Seat, error) {
 	var seats []cinemaService.Seat
@@ -266,6 +418,37 @@ func (r *repo) GetUserByID(ctx context.Context, id int) (*cinemaService.User, er
 		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
 	return &user, nil
+}
+
+func (r *repo) GetAllUsers(ctx context.Context) ([]cinemaService.User, error) {
+	var users []cinemaService.User
+	query := `SELECT id, email, password_hash, phone, is_active, created_at, updated_at FROM users ORDER BY id`
+	if err := r.postgresDB.SelectContext(ctx, &users, query); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return users, nil
+}
+
+// Работа с билетами
+func (r *repo) GetAllTickets(ctx context.Context, userID int) ([]cinemaService.Ticket, error) {
+	var tickets []cinemaService.Ticket
+	query := `SELECT t.id, t.session_id, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id WHERE b.user_id = $1 ORDER BY t.id`
+	if err := r.postgresDB.SelectContext(ctx, &tickets, query, userID); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return tickets, nil
+}
+
+func (r *repo) GetTicketByID(ctx context.Context, userID int, ticketID int) (*cinemaService.Ticket, error) {
+	var ticket cinemaService.Ticket
+	query := `SELECT t.id, t.session_id, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id WHERE t.id = $1 AND b.user_id = $2`
+	if err := r.postgresDB.GetContext(ctx, &ticket, query, ticketID, userID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, cinemaService.NewNotFoundError("ticket")
+		}
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return &ticket, nil
 }
 
 // Тестовые методы

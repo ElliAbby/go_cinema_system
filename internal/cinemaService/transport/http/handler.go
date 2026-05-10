@@ -41,6 +41,10 @@ func getIDFromURL(r *http.Request, paramName string) (int, error) {
 	return strconv.Atoi(idStr)
 }
 
+func getAuthenticatedUserID(r *http.Request) (int, bool) {
+	return GetUserIDFromContext(r)
+}
+
 // Эндпоинты для фильмов
 func (h *handler) GetAllMovies(w http.ResponseWriter, r *http.Request) {
 	movies, err := h.uc.GetAllMovies(r.Context())
@@ -191,7 +195,7 @@ func (h *handler) CreateCinema(w http.ResponseWriter, r *http.Request) {
 
 // Эндпоинты для залов
 func (h *handler) GetHallsByCinema(w http.ResponseWriter, r *http.Request) {
-	cinemaID, err := getIDFromURL(r, "cinemaId")
+	cinemaID, err := getIDFromURL(r, "id")
 	if err != nil {
 		respondError(w, cinemaService.NewValidationError("cinemaId"), 400)
 		return
@@ -243,7 +247,7 @@ func (h *handler) GetSessionByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetSessionsByMovie(w http.ResponseWriter, r *http.Request) {
-	movieID, err := getIDFromURL(r, "movieId")
+	movieID, err := getIDFromURL(r, "id")
 	if err != nil {
 		respondError(w, cinemaService.NewValidationError("movieId"), 400)
 		return
@@ -279,6 +283,80 @@ func (h *handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 	respondJSON(w, map[string]int{"id": id}, http.StatusCreated)
 }
+
+// Эндпоинты для бронирований и покупок
+func (h *handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+
+	var req cinemaService.CreateBookingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, cinemaService.ErrInvalidInput, 400)
+		return
+	}
+
+	booking, err := h.uc.CreateBooking(r.Context(), userID, &req)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{"booking": booking}, http.StatusCreated)
+}
+
+func (h *handler) PurchaseBooking(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+
+	bookingID := chi.URLParam(r, "id")
+	if bookingID == "" {
+		respondError(w, cinemaService.NewValidationError("booking id"), http.StatusBadRequest)
+		return
+	}
+
+	booking, tickets, err := h.uc.PurchaseBooking(r.Context(), userID, bookingID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"booking": booking,
+		"tickets": tickets,
+	}, http.StatusOK)
+}
+
+func (h *handler) GetAllMyBookings(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+	bookings, err := h.uc.GetAllMyBookings(r.Context(), userID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+	respondJSON(w, bookings, http.StatusOK)
+}	
 
 // Auth middleware
 func (h *handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -318,6 +396,82 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, resp, http.StatusOK)
+}
+
+// Эндпоинты для пользователей
+func (h *handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.uc.ListUsers(r.Context())
+	if err != nil {
+		respondError(w, cinemaService.ErrInternal, 500)
+		return
+	}
+
+	respondJSON(w, users, http.StatusOK)
+}
+
+func (h *handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+	user, err := h.uc.GetMe(r.Context(), userID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+			return
+		}
+		respondError(w, cinemaService.ErrInternal, 500)
+		return
+	}
+	respondJSON(w, user, http.StatusOK)
+}
+
+// Эндпоинты для билетов
+func (h *handler) ListTickets(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+
+	tickets, err := h.uc.ListTickets(r.Context(), userID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, tickets, http.StatusOK)
+}
+
+func (h *handler) GetTicketByID(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+
+	ticketID, err := getIDFromURL(r, "id")
+	if err != nil {
+		respondError(w, cinemaService.NewValidationError("ticket id"), 400)
+		return
+	}
+
+	ticket, err := h.uc.GetTicketByID(r.Context(), userID, ticketID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}	
+
+	respondJSON(w, ticket, http.StatusOK)
 }
 
 // Тестовые эндпоинты

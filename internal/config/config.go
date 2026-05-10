@@ -26,6 +26,10 @@ type DBConfig struct {
 	SSLMode  string
 }
 
+type JWTConfig struct {
+	SecretKey string
+}
+
 func (c *DBConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode)
@@ -34,6 +38,7 @@ func (c *DBConfig) DSN() string {
 type Config struct {
 	Server ServerConfig
 	DB     DBConfig
+	JWT    JWTConfig
 }
 
 func Load() (Config, error) {
@@ -55,7 +60,11 @@ func Load() (Config, error) {
 		log.Printf("Не удалось загрузить конфигурацию базы данных: %v", err)
 		return Config{}, err
 	}
-
+	cfg.JWT, err = LoadJWTConfig()
+	if err != nil {
+		log.Printf("Не удалось загрузить конфигурацию JWT: %v", err)
+		return Config{}, err
+	}
 	return cfg, nil
 }
 
@@ -114,6 +123,18 @@ func LoadDBConfig() (DBConfig, error) {
 		return DBConfig{}, err
 	}
 
+	return cfg, nil
+}
+
+// Загрузка конфига JWT
+func LoadJWTConfig() (JWTConfig, error) {
+	var cfg JWTConfig
+	var err error
+	
+	cfg.SecretKey, err = getEnv("JWT_SECRET_KEY")
+	if err != nil {
+		return JWTConfig{}, err
+	}
 	return cfg, nil
 }
 

@@ -4,6 +4,7 @@ import (
     "net/http"
 
     "github.com/go-chi/chi/v5"
+
 )
 
 func RegisterRouters(h *handler) http.Handler {
@@ -24,6 +25,8 @@ func RegisterRouters(h *handler) http.Handler {
     // Auth
     r.Post("/auth/register", h.Register)
     r.Post("/auth/login", h.Login)
+    // TODO: добавить рефреш токен
+    // r.Post("/auth/refresh", h.Refresh) 
 
     // Test
     r.Get("/test", h.TestEndpoint)
@@ -53,6 +56,7 @@ func RegisterRouters(h *handler) http.Handler {
         })
         r.Get("/{id}", h.GetCinemaByID)
         r.Get("/{id}/halls", h.GetHallsByCinema)
+        // TODO: добавить эдндпоинты для залов
     })
 
     // Sessions
@@ -62,6 +66,46 @@ func RegisterRouters(h *handler) http.Handler {
             JWTMiddleware(http.HandlerFunc(h.CreateSession)).ServeHTTP(w, r)
         })
         r.Get("/{id}", h.GetSessionByID)
+        // TODO: добавить список доступных мест
+    })
+
+    // Bookings
+    r.Route("/bookings", func(r chi.Router) {
+        r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.GetAllMyBookings)).ServeHTTP(w, r)
+        })
+        r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.CreateBooking)).ServeHTTP(w, r)
+        })
+        r.Post("/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.PurchaseBooking)).ServeHTTP(w, r)
+        })
+        // TODO: добавить удаление брони - до опалты
+        // r.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) {
+        //     JWTMiddleware(http.HandlerFunc(h.DeleteBooking)).ServeHTTP(w, r)
+        // })
+    })
+
+    // Users
+    r.Route("/users", func(r chi.Router) {
+        r.Get("/", h.ListUsers)
+        r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.GetMe)).ServeHTTP(w, r)
+        })
+        // TODO: добавить обновление пользователя
+        // r.Patch("/{id}", func(w http.ResponseWriter, r *http.Request) {
+        //     JWTMiddleware(http.HandlerFunc(h.UpdateMe)).ServeHTTP(w, r)
+        // })
+    })
+
+    // Tickets
+    r.Route("/tickets", func(r chi.Router) {
+        r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.ListTickets)).ServeHTTP(w, r)
+        })
+        r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.GetTicketByID)).ServeHTTP(w, r)
+        })
     })
 
     return r

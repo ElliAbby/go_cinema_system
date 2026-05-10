@@ -14,6 +14,8 @@ type useCase struct {
 	repo cinemaService.Repository
 }
 
+const reservationHoldDuration = 15 * time.Minute
+
 func New(r cinemaService.Repository) *useCase {
 	return &useCase{repo: r}
 }
@@ -161,6 +163,81 @@ func (uc *useCase) CreateSession(ctx context.Context, req *cinemaService.CreateS
 	return uc.repo.CreateSession(ctx, session)
 }
 
+// Бронирование и покупка билетов
+func validateSeatIDs(seatIDs []int) error {
+	if len(seatIDs) == 0 {
+		return cinemaService.NewValidationError("seat ids")
+	}
+
+	seen := make(map[int]struct{}, len(seatIDs))
+	for _, seatID := range seatIDs {
+		if seatID <= 0 {
+			return cinemaService.NewValidationError("seat id")
+		}
+		if _, exists := seen[seatID]; exists {
+			return cinemaService.NewValidationError("seat ids")
+		}
+		seen[seatID] = struct{}{}
+	}
+
+	return nil
+}
+
+func (uc *useCase) CreateBooking(ctx context.Context, userID int, req *cinemaService.CreateBookingRequest) (*cinemaService.Booking, error) {
+	if userID <= 0 {
+		return nil, cinemaService.NewValidationError("user id")
+	}
+	if req == nil {
+		return nil, cinemaService.ErrInvalidInput
+	}
+	if req.SessionID <= 0 {
+		return nil, cinemaService.NewValidationError("session id")
+	}
+	if err := validateSeatIDs(req.SeatIDs); err != nil {
+		return nil, err
+	}
+
+	booking, err := uc.repo.CreateBooking(ctx, userID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	booking.ExpiresAt = booking.CreatedAt.Add(reservationHoldDuration)
+	booking.SeatIDs = append([]int(nil), req.SeatIDs...)
+	return booking, nil
+}
+
+func (uc *useCase) PurchaseBooking(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, []cinemaService.Ticket, error) {
+	if userID <= 0 {
+		return nil, nil, cinemaService.NewValidationError("user id")
+	}
+	if bookingID == "" {
+		return nil, nil, cinemaService.NewValidationError("booking id")
+	}
+
+	booking, tickets, err := uc.repo.PurchaseBooking(ctx, userID, bookingID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if booking != nil {
+		booking.SeatIDs = make([]int, 0, len(tickets))
+		for _, ticket := range tickets {
+			booking.SeatIDs = append(booking.SeatIDs, ticket.SeatID)
+		}
+	}
+
+	return booking, tickets, nil
+}
+
+func (uc *useCase) GetAllMyBookings(ctx context.Context, userID int) ([]cinemaService.Booking, error) {
+	if userID <= 0 {
+		return nil, cinemaService.NewValidationError("user id")
+	}
+
+	return uc.repo.GetAllMyBookings(ctx, userID)
+}
+
 // Auth методы
 func (uc *useCase) Register(ctx context.Context, req *cinemaService.RegisterRequest) (*cinemaService.AuthResponse, error) {
 	if req == nil || req.Email == "" || req.Password == "" {
@@ -178,10 +255,10 @@ func (uc *useCase) Register(ctx context.Context, req *cinemaService.RegisterRequ
 	}
 
 	user := &cinemaService.User{
-		Email:    req.Email,
+		Email:        req.Email,
 		PasswordHash: hashedPassword,
-		Phone:    req.Phone,
-		IsActive: true,	
+		Phone:        req.Phone,
+		IsActive:     true,
 	}
 
 	userID, err := uc.repo.CreateUser(ctx, user)
@@ -195,9 +272,9 @@ func (uc *useCase) Register(ctx context.Context, req *cinemaService.RegisterRequ
 	}
 
 	return &cinemaService.AuthResponse{
-		Token: token,
-		UserID: userID,
-		Email: req.Email,
+		Token:     token,
+		UserID:    userID,
+		Email:     req.Email,
 		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
 	}, nil
 }
@@ -226,11 +303,41 @@ func (uc *useCase) Login(ctx context.Context, req *cinemaService.LoginRequest) (
 	}
 
 	return &cinemaService.AuthResponse{
-		Token: token,
-		UserID: user.ID,
-		Email: user.Email,
+		Token:     token,
+		UserID:    user.ID,
+		Email:     user.Email,
 		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
 		}, nil
+}
+
+// Пользователи
+func (uc *useCase) ListUsers(ctx context.Context) ([]cinemaService.User, error) {
+	return uc.repo.GetAllUsers(ctx)
+}
+
+func (uc *useCase) GetMe(ctx context.Context, userID int) (*cinemaService.User, error) {
+	if userID <= 0 {
+		return nil, cinemaService.NewValidationError("user id")
+	}
+	return uc.repo.GetUserByID(ctx, userID)
+}
+
+// Билеты
+func (uc *useCase) ListTickets(ctx context.Context, userID int) ([]cinemaService.Ticket, error) {
+	if userID <= 0 {
+		return nil, cinemaService.NewValidationError("user id")
+	}
+	return uc.repo.GetAllTickets(ctx, userID)
+}
+
+func (uc *useCase) GetTicketByID(ctx context.Context, userID int, ticketID int) (*cinemaService.Ticket, error) {
+	if userID <= 0 {
+		return nil, cinemaService.NewValidationError("user id")
+	}
+	if ticketID <= 0 {
+		return nil, cinemaService.NewValidationError("ticket id")
+	}
+	return uc.repo.GetTicketByID(ctx, userID, ticketID)
 }
 
 // Тестовые методы

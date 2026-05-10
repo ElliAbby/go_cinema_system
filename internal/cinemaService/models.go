@@ -62,6 +62,8 @@ type Booking struct {
 	TotalPrice float64   `json:"total_price" db:"total_price"`
 	Status     string    `json:"status" db:"status"` // pending, paid, cancelled, refunded
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	ExpiresAt  time.Time `json:"expires_at,omitempty" db:"-"`
+	SeatIDs    []int     `json:"seat_ids,omitempty" db:"-"`
 }
 
 // Ticket представляет билет
@@ -71,6 +73,15 @@ type Ticket struct {
 	SeatID    int    `json:"seat_id" db:"seat_id"`
 	BookingID string `json:"booking_id" db:"booking_id"`
 	Status    string `json:"status" db:"status"` // active, used, refunded
+}
+
+// Reservation представляет временную фиксацию места перед покупкой
+type Reservation struct {
+	SeatID      int       `json:"seat_id" db:"seat_id"`
+	SessionID   int       `json:"session_id" db:"session_id"`
+	UserID      int       `json:"user_id" db:"user_id"`
+	BookingID   string    `json:"booking_id" db:"booking_id"`
+	LockedUntil time.Time `json:"locked_until" db:"locked_until"`
 }
 
 // CreateMovieRequest для создания фильма
@@ -93,6 +104,12 @@ type CreateSessionRequest struct {
 	HallID    int       `json:"hall_id" binding:"required"`
 	StartTime time.Time `json:"start_time" binding:"required"`
 	PriceBase float64   `json:"price_base" binding:"required,min=0"`
+}
+
+// CreateBookingRequest для бронирования мест на сеанс
+type CreateBookingRequest struct {
+	SessionID int   `json:"session_id" binding:"required"`
+	SeatIDs   []int `json:"seat_ids" binding:"required,min=1"`
 }
 
 // Модели для работы с авторизацией и аутентификацией

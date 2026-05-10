@@ -8,12 +8,16 @@ import (
 
 )
 
-var secretKey = []byte("secret_key")
+var secretKey []byte
+
+func Init(jwtSecret string) {
+	secretKey = []byte(jwtSecret)
+}
 
 // jwt payload
 type Claims struct {
-	UserID int `json:"user_id"`
-	Email string `json:"email"`
+	UserID int    `json:"user_id"`
+	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 

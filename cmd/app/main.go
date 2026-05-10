@@ -13,6 +13,7 @@ import (
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/repository"
 	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinemaService/transport/http"
 	"github.com/ElliAbby/go_cinema_system/internal/db/postgres"
+	"github.com/ElliAbby/go_cinema_system/internal/jwt"
 
 )
 
@@ -25,6 +26,8 @@ func main() {
 	}
 	log.Printf("Конфигурация сервера: %+v", cfg.Server)
 
+	jwt.Init(cfg.JWT.SecretKey)
+
 	db, err := postgres.NewPostgresDB(&cfg.DB)
 	if err != nil {
 		log.Printf("Не удалось создать SQL-соединение: %v", err)
@@ -32,6 +35,13 @@ func main() {
 	}
 	defer db.Close()
 	log.Println("Соединение с БД успешно установлено")
+
+	// Заполняем БД тестовыми данными если она пуста
+	if err := postgres.SeedDatabase(db); err != nil {
+		log.Printf("Ошибка при загрузке seed-данных: %v", err)
+		return
+	}
+	log.Println("Seed-данные успешно загружены (если требовалось)")
 
 	repo := repository.New(db)
 	uc := usecase.New(repo)

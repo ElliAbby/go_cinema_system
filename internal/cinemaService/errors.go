@@ -37,7 +37,7 @@ var (
 	}
 	ErrEmailAlreadyExists = AppError{
 		Code:    "USER_EXISTS",
-		Message: "ser with this email already exists",
+		Message: "User with this email already exists",
 		Status:  409,
 	}
 )
@@ -60,11 +60,20 @@ func NewValidationError(field string) AppError {
 	}
 }
 
+// NewConflictError возвращает ошибку конфликта
+func NewConflictError(message string) AppError {
+	return AppError{
+		Code:    "CONFLICT",
+		Message: message,
+		Status:  409,
+	}
+}
+
 // NewDatabaseError возвращает ошибку БД
 func NewDatabaseError(msg string) AppError {
 	return AppError{
 		Code:    "DATABASE_ERROR",
-		Message: fmt.Sprintf("Database error: %s", msg),
+		Message: "Database operation failed",
 		Status:  500,
 	}
 }
