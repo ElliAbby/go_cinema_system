@@ -10,23 +10,7 @@
 
 ## Как запустить приложение
 
-### 1. Подготовь базу данных PostgreSQL
-
-Запустить Postgres через Docker:
-
-```bash
-docker run --name cinema-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cinema -p 5432:5432 -d postgres:16-alpine
-```
-
-Если PostgreSQL уже установлен локально, просто убедись, что он запущен и доступен на `localhost:5432`.
-
-#### Тест работы БД
-
-```bash
-docker compose exec postgres psql -U postgres -d cinema -c "select * from cinemas;"
-```
-
-### 2. Создай файл `.env`
+### 1. Создай файл `.env`
 
 Скопируйте [`.env.example`](.env.example) в `.env` и заполните реальные значения:
 
@@ -50,47 +34,7 @@ KAFKA_BOOKING_PAYMENTS_TOPIC=booking.payments
 KAFKA_BOOKING_PAYMENTS_GROUP=cinema-booking-api
 ```
 
-### 3. Установи зависимости Go
-
-Из корня проекта:
-
-```bash
-go mod download
-```
-
-### 4. Запусти приложение
-
-```bash
-go run ./cmd/cinema-service
-```
-
-Если всё настроено правильно, в логах появится сообщение о запуске сервера и успешном подключении к БД.
-
-### 5. Запусти worker для заказов
-
-Во втором терминале:
-
-```bash
-go run ./cmd/order-service
-```
-
-Worker читает события оплаты из Kafka, завершает покупку и обновляет статус брони.
-
-### 6. Проверь приложение
-
-Открой в браузере или через `curl`:
-
-```bash
-curl http://localhost:8080/
-curl http://localhost:8080/test
-curl http://localhost:8080/slow
-```
-
-### 7. Останови сервер
-
-Нажмите `Ctrl + C` в терминале. Приложение выполнит graceful shutdown и корректно закроет HTTP-сервер и соединение с БД.
-
-## Запуск через Docker Compose
+### 2. Запуск через Docker Compose
 
 Поднять сразу и приложение, и PostgreSQL можно с помощью Docker:
 
@@ -105,7 +49,13 @@ docker compose up --build
 - Kafka будет доступна на `localhost:9092`
 - worker заказов будет поднят как отдельный контейнер
 
-##### Веб-интерфейсы
+#### Тест работы БД
+
+```bash
+docker compose exec postgres psql -U postgres -d cinema -c "select * from cinemas;"
+```
+
+#### Веб-интерфейсы
 
 После `docker compose up -d --build` доступны:
 
@@ -141,234 +91,6 @@ docker compose down -v
 docker compose up --build
 ```
 
-Важно: если таблицы уже были созданы старой схемой, одного `docker compose up --build` недостаточно. Нужно удалить volume, чтобы Postgres выполнил init-скрипты заново.
+## API Reference
 
-## API Documentation
-
-После запуска приложение предоставляет следующие API эндпоинты для работы с данными:
-
-### System Endpoints
-
-- `GET /` — стартовая страница с приветствием
-- `GET /health` — проверка здоровья приложения (проверяет БД)
-
-### Movies API
-
-- `GET /movies` — получить все фильмы
-- `POST /movies` — создать новый фильм
-  ```json
-  {
-    "title": "Interstellar",
-    "duration": 169,
-    "rating": "PG-13",
-    "description": "Epic sci-fi movie"
-  }
-  ```
-- `GET /movies/{id}` — получить фильм по ID
-- `PUT /movies/{id}` — обновить фильм
-- `DELETE /movies/{id}` — удалить фильм
-
-### Cinemas API
-
-- `GET /cinemas` — получить все кинотеатры
-- `POST /cinemas` — создать новый кинотеатр
-  ```json
-  {
-    "name": "Киносинема",
-    "address": "ул. Пушкина, 10"
-  }
-  ```
-- `GET /cinemas/{id}` — получить кинотеатр по ID
-
-### Halls API
-
-- `GET /cinemas/{cinemaId}/halls` — получить все залы в кинотеатре
-
-### Sessions API
-
-- `GET /sessions` — получить все сеансы
-- `POST /sessions` — создать новый сеанс
-  ```json
-  {
-    "movie_id": 1,
-    "hall_id": 1,
-    "start_time": "2026-05-10T18:00:00Z",
-    "price_base": 250.0
-  }
-  ```
-- `GET /sessions/{id}` — получить сеанс по ID
-- `GET /movies/{movieId}/sessions` — получить все сеансы для фильма
-
-### Authentication API
-
-Приложение использует JWT токены для авторизации.
-
-#### Register (Регистрация)
-
-- `POST /auth/register`
-
-```bash
-curl -X POST http://localhost:8080/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123",
-    "phone": "+7 999 123 45 67"
-  }'
-```
-
-Response:
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user_id": 1,
-  "email": "user@example.com",
-  "expires_at": 1715461234
-}
-```
-
-#### Login (Вход)
-
-- `POST /auth/login`
-
-```bash
-curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
-```
-
-Есть также защищённые эндпоинты, которые требуют авторизации.
-
-Используйте полученный токен в заголовке Authorization:
-
-```bash
-curl -X POST http://localhost:8080/bookings \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
-  -H "Content-Type: application/json" \
-  -d '{
-    "session_id": 1,
-    "seats": [1, 2, 3]
-  }'
-```
-
-Если токен истёк или неверный, получите 401 ответ:
-
-```json
-{
-  "code": "UNAUTHORIZED",
-  "message": "Invalid or expired token"
-}
-```
-
-### Bookings API
-
-- `POST /bookings` — создать бронь мест
-- `POST /bookings/{id}/purchase` — отправить заказ на обработку платежа через Kafka
-- `GET /bookings/{id}` — получить текущий статус заказа
-- `GET /bookings` — список своих бронирований
-
-`POST /bookings/{id}/purchase` теперь возвращает `202 Accepted`, а финальный статус заказа можно получить через `GET /bookings/{id}` или в списке бронирований.
-
-### Примеры использования
-
-#### Создать фильм
-
-```bash
-curl -X POST http://localhost:8080/movies \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "The Matrix",
-    "duration": 136,
-    "rating": "R",
-    "description": "A computer programmer discovers the true nature of his reality"
-  }'
-```
-
-#### Получить все фильмы
-
-```bash
-curl http://localhost:8080/movies
-```
-
-#### Получить фильм по ID
-
-```bash
-curl http://localhost:8080/movies/1
-```
-
-#### Создать кинотеатр
-
-```bash
-curl -X POST http://localhost:8080/cinemas \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Киносинема Центр",
-    "address": "Красная площадь, 1"
-  }'
-```
-
-#### Создать сеанс фильма
-
-```bash
-curl -X POST http://localhost:8080/sessions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "movie_id": 1,
-    "hall_id": 1,
-    "start_time": "2026-05-10T19:00:00Z",
-    "price_base": 300
-  }'
-```
-
-#### Проверить здоровье приложения
-
-```bash
-curl http://localhost:8080/health
-```
-
-#### Создать бронь и отправить на оплату
-
-```bash
-curl -X POST http://localhost:8080/bookings/1/purchase \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json"
-```
-
-#### Проверить статус заказа
-
-```bash
-curl http://localhost:8080/bookings/1 \
-  -H "Authorization: Bearer <token>"
-```
-
-### Error Handling
-
-Приложение возвращает структурированные JSON ошибки:
-
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "movie not found",
-    "status": 404
-  }
-}
-```
-
-Коды ошибок:
-
-- `NOT_FOUND` (404) — ресурс не найден
-- `INVALID_INPUT` (400) — неверные данные
-- `CONFLICT` (409) — ресурс уже существует
-- `DATABASE_ERROR` (500) — ошибка базы данных
-- `INTERNAL_ERROR` (500) — внутренняя ошибка сервера
-
-## Что делает приложение
-
-- `GET /` — простая стартовая страница.
-- `GET /test` — запрос через слой usecase/repository.
-- `GET /slow` — имитация долгого запроса.
+Подробное описание API вынесено в отдельный файл: [docs/api.md](docs/api.md)

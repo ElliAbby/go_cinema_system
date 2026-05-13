@@ -119,11 +119,13 @@ type RegisterRequest struct {
 	Phone string `json:"phone"`
 }
 
+// LoginRequest для аутентификации
 type LoginRequest struct {
 	Email string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }
 
+// AuthResponse для ответа на запрос аутентификации
 type AuthResponse struct {
 	Token string `json:"token"`
 	UserID  int   `json:"user_id"`
