@@ -76,6 +76,9 @@ func RegisterRouters(h *handler) http.Handler {
 
     // Bookings
     r.Route("/bookings", func(r chi.Router) {
+        r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
+            JWTMiddleware(http.HandlerFunc(h.GetBookingByID)).ServeHTTP(w, r)
+        })
         r.Get("/", func(w http.ResponseWriter, r *http.Request) {
             JWTMiddleware(http.HandlerFunc(h.GetAllMyBookings)).ServeHTTP(w, r)
         })

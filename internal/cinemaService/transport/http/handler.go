@@ -326,9 +326,7 @@ func (h *handler) PurchaseBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startPayment := time.Now()
-
-	booking, tickets, err := h.uc.PurchaseBooking(r.Context(), userID, bookingID)
+	booking, err := h.uc.RequestBookingPayment(r.Context(), userID, bookingID)
 	if err != nil {
 		if appErr, ok := err.(cinemaService.AppError); ok {
 			respondError(w, appErr, appErr.Status)
@@ -338,12 +336,36 @@ func (h *handler) PurchaseBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metrics.ObservePaymentDuration(time.Since(startPayment).Seconds())
-
 	respondJSON(w, map[string]interface{}{
 		"booking": booking,
-		"tickets": tickets,
-	}, http.StatusOK)
+		"message": "payment request queued",
+	}, http.StatusAccepted)
+}
+
+func (h *handler) GetBookingByID(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+
+	bookingID := chi.URLParam(r, "id")
+	if bookingID == "" {
+		respondError(w, cinemaService.NewValidationError("booking id"), http.StatusBadRequest)
+		return
+	}
+
+	booking, err := h.uc.GetBookingByID(r.Context(), userID, bookingID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, booking, http.StatusOK)
 }
 
 func (h *handler) GetAllMyBookings(w http.ResponseWriter, r *http.Request) {

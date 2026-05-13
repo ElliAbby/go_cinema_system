@@ -2,22 +2,43 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ElliAbby/go_cinema_system/internal/cinemaService"
+	cinemaKafka "github.com/ElliAbby/go_cinema_system/internal/kafka"
 	"github.com/ElliAbby/go_cinema_system/internal/jwt"
-  	"github.com/ElliAbby/go_cinema_system/internal/security"
 	"github.com/ElliAbby/go_cinema_system/internal/metrics"
+	"github.com/ElliAbby/go_cinema_system/internal/security"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 )
 
 type useCase struct {
-	repo cinemaService.Repository
+	repo     cinemaService.Repository
+	publisher PaymentPublisher
+}
+
+type PaymentPublisher interface {
+	PublishPaymentRequested(ctx context.Context, event cinemaKafka.PaymentRequestedEvent) error
 }
 
 const reservationHoldDuration = 15 * time.Minute
 
-func New(r cinemaService.Repository) *useCase {
-	return &useCase{repo: r}
+func New(r cinemaService.Repository, publisher PaymentPublisher) *useCase {
+	return &useCase{repo: r, publisher: publisher}
 }
 
 // Фильмы
@@ -210,39 +231,52 @@ func (uc *useCase) CreateBooking(ctx context.Context, userID int, req *cinemaSer
 	return booking, nil
 }
 
-func (uc *useCase) PurchaseBooking(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, []cinemaService.Ticket, error) {
-	startPayment := time.Now()
-	defer func() {
-		metrics.ObservePaymentDuration(time.Since(startPayment).Seconds())
-	}()
+func (uc *useCase) GetBookingByID(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, error) {
+	if userID <= 0 {
+		return nil, cinemaService.NewValidationError("user id")
+	}
+	if bookingID == "" {
+		return nil, cinemaService.NewValidationError("booking id")
+	}
 
+	return uc.repo.GetBookingByID(ctx, userID, bookingID)
+}
+
+func (uc *useCase) RequestBookingPayment(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, error) {
 	if userID <= 0 {
 		metrics.IncBookingErrors("invalid_user_id")
-		return nil, nil, cinemaService.NewValidationError("user id")
+		return nil, cinemaService.NewValidationError("user id")
 	}
 	if bookingID == "" {
 		metrics.IncBookingErrors("empty_booking_id")
-		return nil, nil, cinemaService.NewValidationError("booking id")
+		return nil, cinemaService.NewValidationError("booking id")
+	}
+	if uc.publisher == nil {
+		return nil, cinemaService.ErrInternal
 	}
 
-	booking, tickets, err := uc.repo.PurchaseBooking(ctx, userID, bookingID)
+	booking, err := uc.repo.GetBookingByID(ctx, userID, bookingID)
 	if err != nil {
 		metrics.IncBookingErrors("purchase_booking_failed")
-		return nil, nil, err
+		return nil, err
+	}
+	if booking.Status != "pending" {
+		return nil, cinemaService.NewConflictError("booking is not available for payment")
 	}
 
-	if booking != nil {
-		booking.SeatIDs = make([]int, 0, len(tickets))
-		for _, ticket := range tickets {
-			booking.SeatIDs = append(booking.SeatIDs, ticket.SeatID)
-		}
+	event := cinemaKafka.PaymentRequestedEvent{
+		BookingID:   booking.ID,
+		UserID:      userID,
+		TotalPrice:   booking.TotalPrice,
+		RequestedAt: time.Now().UTC(),
+	}
+	if err := uc.publisher.PublishPaymentRequested(ctx, event); err != nil {
+		metrics.IncBookingErrors("payment_publish_failed")
+		return nil, cinemaService.NewDatabaseError(fmt.Sprintf("publish payment request: %v", err))
 	}
 
-	metrics.DecActiveBookings()           // Уменьшаем активные бронирования
-    metrics.AddRevenue(booking.TotalPrice)
-	metrics.AddTicketsSold(float64(len(tickets)))
-
-	return booking, tickets, nil
+	booking.Status = "pending"
+	return booking, nil
 }
 
 func (uc *useCase) GetAllMyBookings(ctx context.Context, userID int) ([]cinemaService.Booking, error) {

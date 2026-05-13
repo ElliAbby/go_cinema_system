@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -30,6 +31,12 @@ type JWTConfig struct {
 	SecretKey string
 }
 
+type KafkaConfig struct {
+	Brokers              []string
+	BookingPaymentsTopic  string
+	BookingPaymentsGroup  string
+}
+
 func (c *DBConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode)
@@ -39,6 +46,12 @@ type Config struct {
 	Server ServerConfig
 	DB     DBConfig
 	JWT    JWTConfig
+	Kafka  KafkaConfig
+}
+
+type WorkerConfig struct {
+	DB    DBConfig
+	Kafka KafkaConfig
 }
 
 func Load() (Config, error) {
@@ -65,6 +78,28 @@ func Load() (Config, error) {
 		log.Printf("Не удалось загрузить конфигурацию JWT: %v", err)
 		return Config{}, err
 	}
+	cfg.Kafka, err = LoadKafkaConfig()
+	if err != nil {
+		log.Printf("Не удалось загрузить конфигурацию Kafka: %v", err)
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+func LoadWorkerConfig() (WorkerConfig, error) {
+	var cfg WorkerConfig
+	var err error
+
+	cfg.DB, err = LoadDBConfig()
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+
+	cfg.Kafka, err = LoadKafkaConfig()
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+
 	return cfg, nil
 }
 
@@ -138,6 +173,26 @@ func LoadJWTConfig() (JWTConfig, error) {
 	return cfg, nil
 }
 
+func LoadKafkaConfig() (KafkaConfig, error) {
+	var cfg KafkaConfig
+	var err error
+
+	cfg.Brokers, err = getCSVEnv("KAFKA_BROKERS")
+	if err != nil {
+		return KafkaConfig{}, err
+	}
+	cfg.BookingPaymentsTopic, err = getEnv("KAFKA_BOOKING_PAYMENTS_TOPIC")
+	if err != nil {
+		return KafkaConfig{}, err
+	}
+	cfg.BookingPaymentsGroup, err = getEnv("KAFKA_BOOKING_PAYMENTS_GROUP")
+	if err != nil {
+		return KafkaConfig{}, err
+	}
+
+	return cfg, nil
+}
+
 // Функции получения из env
 func getEnv(key string) (string, error) {
 	v, ok := os.LookupEnv(key)
@@ -159,4 +214,25 @@ func getDurationEnv(key string) (time.Duration, error) {
 	}
 
 	return duration, nil
+}
+
+func getCSVEnv(key string) ([]string, error) {
+	value, err := getEnv(key)
+	if err != nil {
+		return nil, err
+	}
+
+	parts := strings.Split(value, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("environment variable %s is empty", key)
+	}
+
+	return items, nil
 }

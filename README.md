@@ -1,6 +1,6 @@
 # go_cinema_system
 
-Небольшой HTTP-сервис на Go.
+Небольшой HTTP-сервис на Go с вынесенной обработкой заказов в отдельный Kafka worker.
 
 ## Требования
 
@@ -42,6 +42,12 @@ DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=cinema
 DB_SSL_MODE=disable
+
+JWT_SECRET_KEY=change-me
+
+KAFKA_BROKERS=localhost:9092
+KAFKA_BOOKING_PAYMENTS_TOPIC=booking.payments
+KAFKA_BOOKING_PAYMENTS_GROUP=cinema-booking-api
 ```
 
 ### 3. Установи зависимости Go
@@ -55,12 +61,22 @@ go mod download
 ### 4. Запусти приложение
 
 ```bash
-go run ./cmd/app
+go run ./cmd/cinema-service
 ```
 
 Если всё настроено правильно, в логах появится сообщение о запуске сервера и успешном подключении к БД.
 
-### 5. Проверь приложение
+### 5. Запусти worker для заказов
+
+Во втором терминале:
+
+```bash
+go run ./cmd/order-service
+```
+
+Worker читает события оплаты из Kafka, завершает покупку и обновляет статус брони.
+
+### 6. Проверь приложение
 
 Открой в браузере или через `curl`:
 
@@ -86,6 +102,8 @@ docker compose up --build
 
 - приложение будет доступно на `http://localhost:8080`
 - PostgreSQL будет доступен на `localhost:5432`
+- Kafka будет доступна на `localhost:9092`
+- worker заказов будет поднят как отдельный контейнер
 
 Чтобы остановить и удалить контейнеры:
 
@@ -235,6 +253,15 @@ curl -X POST http://localhost:8080/bookings \
 }
 ```
 
+### Bookings API
+
+- `POST /bookings` — создать бронь мест
+- `POST /bookings/{id}/purchase` — отправить заказ на обработку платежа через Kafka
+- `GET /bookings/{id}` — получить текущий статус заказа
+- `GET /bookings` — список своих бронирований
+
+`POST /bookings/{id}/purchase` теперь возвращает `202 Accepted`, а финальный статус заказа можно получить через `GET /bookings/{id}` или в списке бронирований.
+
 ### Примеры использования
 
 #### Создать фильм
@@ -290,6 +317,21 @@ curl -X POST http://localhost:8080/sessions \
 
 ```bash
 curl http://localhost:8080/health
+```
+
+#### Создать бронь и отправить на оплату
+
+```bash
+curl -X POST http://localhost:8080/bookings/1/purchase \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json"
+```
+
+#### Проверить статус заказа
+
+```bash
+curl http://localhost:8080/bookings/1 \
+  -H "Authorization: Bearer <token>"
 ```
 
 ### Error Handling

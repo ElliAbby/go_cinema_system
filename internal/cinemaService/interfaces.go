@@ -30,7 +30,8 @@ type Repository interface {
 
 	// Бронирования и покупка
 	CreateBooking(ctx context.Context, userID int, req *CreateBookingRequest) (*Booking, error)
-	PurchaseBooking(ctx context.Context, userID int, bookingID string) (*Booking, []Ticket, error)
+	GetBookingByID(ctx context.Context, userID int, bookingID string) (*Booking, error)
+	UpdateBookingStatus(ctx context.Context, bookingID string, status string) error
 	GetAllMyBookings(ctx context.Context, userID int) ([]Booking, error)
 
 	// Места
@@ -79,7 +80,8 @@ type UseCase interface {
 
 	// Бронирования и покупка
 	CreateBooking(ctx context.Context, userID int, req *CreateBookingRequest) (*Booking, error)
-	PurchaseBooking(ctx context.Context, userID int, bookingID string) (*Booking, []Ticket, error)
+	GetBookingByID(ctx context.Context, userID int, bookingID string) (*Booking, error)
+	RequestBookingPayment(ctx context.Context, userID int, bookingID string) (*Booking, error)
 	GetAllMyBookings(ctx context.Context, userID int) ([]Booking, error)
 
 	// Auth методы

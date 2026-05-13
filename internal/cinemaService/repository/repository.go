@@ -277,76 +277,34 @@ func (r *repo) CreateBooking(ctx context.Context, userID int, req *cinemaService
 	return &booking, nil
 }
 
-func (r *repo) PurchaseBooking(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, []cinemaService.Ticket, error) {
-	tx, err := r.postgresDB.BeginTxx(ctx, nil)
-	if err != nil {
-		return nil, nil, cinemaService.NewDatabaseError(err.Error())
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
+func (r *repo) GetBookingByID(ctx context.Context, userID int, bookingID string) (*cinemaService.Booking, error) {
 	var booking cinemaService.Booking
-	bookingQuery := `SELECT id, user_id, total_price, status, created_at FROM bookings WHERE id = $1 AND user_id = $2 FOR UPDATE`
-	if err := tx.GetContext(ctx, &booking, bookingQuery, bookingID, userID); err != nil {
+	query := `SELECT id, user_id, total_price, status, created_at FROM bookings WHERE id = $1 AND user_id = $2`
+	if err := r.postgresDB.GetContext(ctx, &booking, query, bookingID, userID); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil, cinemaService.NewNotFoundError("booking")
+			return nil, cinemaService.NewNotFoundError("booking")
 		}
-		return nil, nil, cinemaService.NewDatabaseError(err.Error())
+		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
-	if booking.Status != "pending" {
-		return nil, nil, cinemaService.NewConflictError("booking is not available for payment")
-	}
-
-	var reservations []cinemaService.Reservation
-	reservationQuery := `SELECT seat_id, session_id, user_id, booking_id, locked_until FROM reservations WHERE booking_id = $1 FOR UPDATE`
-	if err := tx.SelectContext(ctx, &reservations, reservationQuery, bookingID); err != nil {
-		return nil, nil, cinemaService.NewDatabaseError(err.Error())
-	}
-	if len(reservations) == 0 {
-		return nil, nil, cinemaService.NewConflictError("booking has no active reservations")
-	}
-	for _, reservation := range reservations {
-		if time.Now().After(reservation.LockedUntil) {
-			return nil, nil, cinemaService.NewConflictError("booking reservation has expired")
-		}
-	}
-
-	tickets := make([]cinemaService.Ticket, 0, len(reservations))
-	ticketQuery := `INSERT INTO tickets (session_id, seat_id, booking_id, status) VALUES ($1, $2, $3, $4) ON CONFLICT (session_id, seat_id) DO NOTHING RETURNING id`
-	for _, reservation := range reservations {
-		var ticket cinemaService.Ticket
-		ticket.SessionID = reservation.SessionID
-		ticket.SeatID = reservation.SeatID
-		ticket.BookingID = bookingID
-		ticket.Status = "active"
-		if err := tx.QueryRowContext(ctx, ticketQuery, reservation.SessionID, reservation.SeatID, bookingID, ticket.Status).Scan(&ticket.ID); err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil, cinemaService.NewConflictError("one or more tickets already exist")
-			}
-			return nil, nil, cinemaService.NewDatabaseError(err.Error())
-		}
-		tickets = append(tickets, ticket)
-	}
-
-	if _, err := tx.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, "paid", bookingID); err != nil {
-		return nil, nil, cinemaService.NewDatabaseError(err.Error())
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM reservations WHERE booking_id = $1`, bookingID); err != nil {
-		return nil, nil, cinemaService.NewDatabaseError(err.Error())
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, nil, cinemaService.NewDatabaseError(err.Error())
-	}
-
-	booking.Status = "paid"
-	booking.SeatIDs = make([]int, 0, len(tickets))
-	for _, ticket := range tickets {
-		booking.SeatIDs = append(booking.SeatIDs, ticket.SeatID)
-	}
-	return &booking, tickets, nil
+	return &booking, nil
 }
+
+func (r *repo) UpdateBookingStatus(ctx context.Context, bookingID string, status string) error {
+	result, err := r.postgresDB.ExecContext(ctx, `UPDATE bookings SET status = $1 WHERE id = $2`, status, bookingID)
+	if err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	if rowsAffected == 0 {
+		return cinemaService.NewNotFoundError("booking")
+	}
+	return nil
+}
+
+
 
 func (r *repo) GetAllMyBookings(ctx context.Context, userID int) ([]cinemaService.Booking, error) {
 	var bookings []cinemaService.Booking
