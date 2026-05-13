@@ -8,14 +8,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ElliAbby/go_cinema_system/internal/config"
-	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/usecase"
-	"github.com/ElliAbby/go_cinema_system/internal/cinemaService/repository"
-	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinemaService/transport/http"
-	"github.com/ElliAbby/go_cinema_system/internal/db/postgres"
-	cinemaKafka "github.com/ElliAbby/go_cinema_system/internal/kafka"
-	"github.com/ElliAbby/go_cinema_system/internal/jwt"
-	"github.com/ElliAbby/go_cinema_system/internal/metrics"
+	"github.com/ElliAbby/go_cinema_system/internal/platform/config"
+	"github.com/ElliAbby/go_cinema_system/internal/cinema/usecase"
+	"github.com/ElliAbby/go_cinema_system/internal/cinema/repository"
+	cinemaHttp "github.com/ElliAbby/go_cinema_system/internal/cinema/transport/http"
+	"github.com/ElliAbby/go_cinema_system/internal/platform/db/postgres"
+	cinemaKafka "github.com/ElliAbby/go_cinema_system/internal/platform/kafka"
+	authjwt "github.com/ElliAbby/go_cinema_system/internal/platform/auth/jwt"
+	"github.com/ElliAbby/go_cinema_system/internal/platform/metrics"
+
 )
 
 
@@ -27,7 +28,7 @@ func main() {
 	}
 	log.Printf("Конфигурация сервера: %+v", cfg.Server)
 
-	jwt.Init(cfg.JWT.SecretKey)
+	tokenManager := authjwt.New(cfg.JWT.SecretKey)
 	metrics.InitMetrics()
 	log.Println("Метрики инициализированы")
 
@@ -55,9 +56,9 @@ func main() {
 	log.Println("Seed-данные успешно загружены (если требовалось)")
 
 	repo := repository.New(db)
-	uc := usecase.New(repo, publisher)
+	uc := usecase.New(repo, publisher, tokenManager)
 	handler := cinemaHttp.New(uc)
-	routers := cinemaHttp.RegisterRouters(handler)
+	routers := cinemaHttp.RegisterRouters(handler, tokenManager)
 
 	srv := &http.Server{
 		Addr:         cfg.Server.Addr,

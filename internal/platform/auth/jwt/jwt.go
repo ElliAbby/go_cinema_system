@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-
 )
 
-var secretKey []byte
+type Manager struct {
+	secretKey []byte
+}
 
-func Init(jwtSecret string) {
-	secretKey = []byte(jwtSecret)
+func New(jwtSecret string) *Manager {
+	return &Manager{secretKey: []byte(jwtSecret)}
 }
 
 // jwt payload
@@ -21,28 +22,28 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID int, email string) (string, error) {
+func (m *Manager) GenerateToken(userID int, email string) (string, error) {
 	claims := Claims{
 		UserID: userID,
-		Email: email,
+		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secretKey)
+	return token.SignedString(m.secretKey)
 }
 
-func ValidateToken(tokenString string) (*Claims, error) {
+func (m *Manager) ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return secretKey, nil
+		return m.secretKey, nil
 	})
 
 	if err != nil {
@@ -56,8 +57,8 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func GetUserIDFromToken(tokenString string) (int, error) {
-	claims, err := ValidateToken(tokenString)
+func (m *Manager) GetUserIDFromToken(tokenString string) (int, error) {
+	claims, err := m.ValidateToken(tokenString)
 	if err != nil {
 		return 0, err
 	}

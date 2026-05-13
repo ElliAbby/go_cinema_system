@@ -173,6 +173,7 @@ func LoadJWTConfig() (JWTConfig, error) {
 	return cfg, nil
 }
 
+// Загрузка конфига Kafka
 func LoadKafkaConfig() (KafkaConfig, error) {
 	var cfg KafkaConfig
 	var err error

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ElliAbby/go_cinema_system/internal/jwt"
+	authjwt "github.com/ElliAbby/go_cinema_system/internal/platform/auth/jwt"
 
 )
 
@@ -13,7 +13,7 @@ type contextKey string
 
 const userIDContextKey contextKey = "user_id"
 
-func JWTMiddleware(next http.Handler) http.Handler {
+func JWTMiddleware(tokenManager *authjwt.Manager, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -35,7 +35,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 
 		tokenString := parts[1]
 
-		claims, err := jwt.ValidateToken(tokenString)
+		claims, err := tokenManager.ValidateToken(tokenString)
 		if err != nil {
 			respondError(w, map[string]interface{}{
 						"code":    "UNAUTHORIZED",
@@ -46,7 +46,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), userIDContextKey, claims.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
-		})
+	})
 }
 
 func GetUserIDFromContext(r *http.Request) (int, bool) {

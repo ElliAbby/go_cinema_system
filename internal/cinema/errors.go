@@ -1,4 +1,4 @@
-package cinemaService
+package cinema
 
 import "fmt"
 

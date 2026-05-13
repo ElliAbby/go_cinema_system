@@ -1,4 +1,4 @@
-package orderService
+package order
 
 type Booking struct {
 	ID         string  `json:"id" db:"id"`
