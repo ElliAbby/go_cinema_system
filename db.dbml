@@ -48,7 +48,7 @@ Table Users {
 }
 
 Table Bookings {
-  id uuid [primary key]
+  id integer [primary key]
   user_id integer [ref: > Users.id]
   total_price decimal
   status varchar // pending, paid, cancelled, refunded
@@ -56,17 +56,22 @@ Table Bookings {
 }
 
 Table Tickets {
-  id uuid [primary key]
+  id integer [primary key]
   session_id integer [ref: > Sessions.id]
   seat_id integer [ref: > Seats.id]
-  booking_id uuid [ref: > Bookings.id]
+  booking_id integer [ref: > Bookings.id]
   status varchar // active, used, refunded
+
+  indexes {
+    (session_id, seat_id) [unique]
+  }
 }
 
 Table Reservations {
   seat_id integer [ref: > Seats.id]
   session_id integer [ref: > Sessions.id]
   user_id integer [ref: > Users.id]
+  booking_id integer [ref: > Bookings.id]
   locked_until timestamp
   
   indexes {
