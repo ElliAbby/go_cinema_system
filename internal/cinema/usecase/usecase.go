@@ -130,6 +130,13 @@ func (uc *useCase) GetHallsByCinema(ctx context.Context, cinemaID int) ([]cinema
 	return uc.repo.GetHallsByCinema(ctx, cinemaID)
 }
 
+func (uc *useCase) GetSeatsByHall(ctx context.Context, hallID int) ([]cinema.Seat, error) {
+	if hallID <= 0 {
+		return nil, cinema.NewValidationError("hall id")
+	}
+	return uc.repo.GetSeatsByHall(ctx, hallID)
+}
+
 // Сессии
 func (uc *useCase) GetAllSessions(ctx context.Context) ([]cinema.Session, error) {
 	return uc.repo.GetAllSessions(ctx)
@@ -273,6 +280,13 @@ func (uc *useCase) GetAllMyBookings(ctx context.Context, userID int) ([]cinema.B
 	}
 
 	return uc.repo.GetAllMyBookings(ctx, userID)
+}
+
+func (uc *useCase) GetReservedSeatIDsBySession(ctx context.Context, sessionID int) ([]int, error) {
+	if sessionID <= 0 {
+		return nil, cinema.NewValidationError("session id")
+	}
+	return uc.repo.GetReservedSeatIDsBySession(ctx, sessionID)
 }
 
 // Auth методы

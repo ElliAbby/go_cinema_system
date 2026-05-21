@@ -11,6 +11,7 @@ import (
 func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 	r := chi.NewRouter()
 
+	r.Use(corsMiddleware)
 	r.Use(metricsMiddleware)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +62,7 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 			JWTMiddleware(tokenManager, http.HandlerFunc(h.CreateSession)).ServeHTTP(w, r)
 		})
 		r.Get("/{id}", h.GetSessionByID)
+		r.Get("/{id}/reserved", h.GetReservedSeats)
 	})
 
 	r.Route("/bookings", func(r chi.Router) {
@@ -77,6 +79,9 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 			JWTMiddleware(tokenManager, http.HandlerFunc(h.PurchaseBooking)).ServeHTTP(w, r)
 		})
 	})
+
+	// Seats
+	r.Get("/halls/{id}/seats", h.GetSeatsByHall)
 
 	r.Route("/users", func(r chi.Router) {
 		r.Get("/", h.ListUsers)

@@ -36,7 +36,7 @@ func (r *repo) PurchaseBooking(ctx context.Context, userID int, bookingID string
 	}
 
 	if booking.Status != "pending" && booking.Status != "processing" {
-		return nil, nil, sql.ErrNoRows // или собственная ошибка
+		return nil, nil, sql.ErrNoRows
 	}
 
 	var reservations []order.Reservation

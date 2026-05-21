@@ -34,6 +34,9 @@ type Repository interface {
 	UpdateBookingStatus(ctx context.Context, bookingID string, status string) error
 	GetAllMyBookings(ctx context.Context, userID int) ([]Booking, error)
 
+	// Reservations
+	GetReservedSeatIDsBySession(ctx context.Context, sessionID int) ([]int, error)
+
 	// Места
 	GetSeatsByHall(ctx context.Context, hallID int) ([]Seat, error)
 	GetSeatByID(ctx context.Context, id int) (*Seat, error)
@@ -83,6 +86,12 @@ type UseCase interface {
 	GetBookingByID(ctx context.Context, userID int, bookingID string) (*Booking, error)
 	RequestBookingPayment(ctx context.Context, userID int, bookingID string) (*Booking, error)
 	GetAllMyBookings(ctx context.Context, userID int) ([]Booking, error)
+
+	// Reservations
+	GetReservedSeatIDsBySession(ctx context.Context, sessionID int) ([]int, error)
+
+	// Seats
+	GetSeatsByHall(ctx context.Context, hallID int) ([]Seat, error)
 
 	// Auth методы
 	Register(ctx context.Context, req *RegisterRequest) (*AuthResponse, error)

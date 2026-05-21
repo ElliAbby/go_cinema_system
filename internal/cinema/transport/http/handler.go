@@ -247,6 +247,45 @@ func (h *handler) GetSessionByID(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, session, http.StatusOK)
 }
 
+func (h *handler) GetSeatsByHall(w http.ResponseWriter, r *http.Request) {
+	hallID, err := getIDFromURL(r, "id")
+	if err != nil {
+		respondError(w, cinemaService.NewValidationError("hall id"), 400)
+		return
+	}
+
+	seats, err := h.uc.GetSeatsByHall(r.Context(), hallID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+	respondJSON(w, seats, http.StatusOK)
+}
+
+func (h *handler) GetReservedSeats(w http.ResponseWriter, r *http.Request) {
+	sessionID, err := getIDFromURL(r, "id")
+	if err != nil {
+		respondError(w, cinemaService.NewValidationError("session id"), 400)
+		return
+	}
+
+	seatIDs, err := h.uc.GetReservedSeatIDsBySession(r.Context(), sessionID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{"reserved_seat_ids": seatIDs}, http.StatusOK)
+}
+
 func (h *handler) GetSessionsByMovie(w http.ResponseWriter, r *http.Request) {
 	movieID, err := getIDFromURL(r, "id")
 	if err != nil {

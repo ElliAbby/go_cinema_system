@@ -286,6 +286,19 @@ func (r *repo) GetBookingByID(ctx context.Context, userID int, bookingID string)
 		}
 		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
+
+	seatIDsQuery := `
+	SELECT DISTINCT seat_id FROM (
+		SELECT seat_id FROM reservations WHERE booking_id = $1
+		UNION
+		SELECT seat_id FROM tickets WHERE booking_id = $1
+	) s
+	ORDER BY seat_id
+	`
+	if err := r.postgresDB.SelectContext(ctx, &booking.SeatIDs, seatIDsQuery, bookingID); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+
 	return &booking, nil
 }
 
@@ -323,6 +336,22 @@ func (r *repo) GetSeatsByHall(ctx context.Context, hallID int) ([]cinemaService.
 		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
 	return seats, nil
+}
+
+func (r *repo) GetReservedSeatIDsBySession(ctx context.Context, sessionID int) ([]int, error) {
+	var seatIDs []int
+	query := `
+	SELECT DISTINCT seat_id FROM (
+		SELECT seat_id FROM reservations WHERE session_id = $1 AND locked_until > NOW()
+		UNION
+		SELECT seat_id FROM tickets WHERE session_id = $1 AND status = 'paid'
+	) t
+	ORDER BY seat_id
+	`
+	if err := r.postgresDB.SelectContext(ctx, &seatIDs, query, sessionID); err != nil {
+		return nil, cinemaService.NewDatabaseError(err.Error())
+	}
+	return seatIDs, nil
 }
 
 func (r *repo) GetSeatByID(ctx context.Context, id int) (*cinemaService.Seat, error) {
