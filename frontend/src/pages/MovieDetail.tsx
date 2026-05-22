@@ -98,11 +98,7 @@ export const MovieDetail: React.FC = () => {
                     <p className="text-2xl font-bold text-blue-400">
                       {Math.round(session.price_base)} ₽
                     </p>
-                    <p className="text-sm text-gray-400">
-                      {typeof session.available_seats === "number"
-                        ? `${session.available_seats} мест`
-                        : "Доступность уточняется"}
-                    </p>
+                    <p className="text-sm text-gray-400">Цена билета</p>
                   </div>
                   <button
                     onClick={() => navigate(`/booking/${session.id}`)}

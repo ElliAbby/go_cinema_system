@@ -274,6 +274,34 @@ func (uc *useCase) RequestBookingPayment(ctx context.Context, userID int, bookin
 	return booking, nil
 }
 
+func (uc *useCase) CancelBooking(ctx context.Context, userID int, bookingID string) (*cinema.Booking, error) {
+	if userID <= 0 {
+		metrics.IncBookingErrors("invalid_user_id")
+		return nil, cinema.NewValidationError("user id")
+	}
+	if bookingID == "" {
+		metrics.IncBookingErrors("empty_booking_id")
+		return nil, cinema.NewValidationError("booking id")
+	}
+
+	booking, err := uc.repo.GetBookingByID(ctx, userID, bookingID)
+	if err != nil {
+		metrics.IncBookingErrors("cancel_booking_failed")
+		return nil, err
+	}
+	if booking.Status != "pending" {
+		return nil, cinema.NewConflictError("only pending bookings can be cancelled")
+	}
+
+	if err := uc.repo.CancelBooking(ctx, userID, bookingID); err != nil {
+		metrics.IncBookingErrors("cancel_booking_failed")
+		return nil, err
+	}
+
+	booking.Status = "cancelled"
+	return booking, nil
+}
+
 func (uc *useCase) GetAllMyBookings(ctx context.Context, userID int) ([]cinema.Booking, error) {
 	if userID <= 0 {
 		return nil, cinema.NewValidationError("user id")

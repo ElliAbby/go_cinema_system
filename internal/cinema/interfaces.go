@@ -32,6 +32,7 @@ type Repository interface {
 	CreateBooking(ctx context.Context, userID int, req *CreateBookingRequest) (*Booking, error)
 	GetBookingByID(ctx context.Context, userID int, bookingID string) (*Booking, error)
 	UpdateBookingStatus(ctx context.Context, bookingID string, status string) error
+	CancelBooking(ctx context.Context, userID int, bookingID string) (error)
 	GetAllMyBookings(ctx context.Context, userID int) ([]Booking, error)
 
 	// Reservations
@@ -85,6 +86,7 @@ type UseCase interface {
 	CreateBooking(ctx context.Context, userID int, req *CreateBookingRequest) (*Booking, error)
 	GetBookingByID(ctx context.Context, userID int, bookingID string) (*Booking, error)
 	RequestBookingPayment(ctx context.Context, userID int, bookingID string) (*Booking, error)
+	CancelBooking(ctx context.Context, userID int, bookingID string) (*Booking, error)
 	GetAllMyBookings(ctx context.Context, userID int) ([]Booking, error)
 
 	// Reservations

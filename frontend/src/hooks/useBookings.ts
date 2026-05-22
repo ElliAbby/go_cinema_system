@@ -23,7 +23,8 @@ export const useCreateBooking = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateBookingPayload) => bookingApi.createBooking(payload),
+    mutationFn: (payload: CreateBookingPayload) =>
+      bookingApi.createBooking(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },
@@ -35,8 +36,21 @@ export const usePurchaseBooking = () => {
 
   return useMutation({
     mutationFn: (id: string) => bookingApi.purchaseBooking(id),
-    onSuccess: () => {
+    onSuccess: (_data, bookingId) => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
+    },
+  });
+};
+
+export const useCancelBooking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingApi.cancelBooking(id),
+    onSuccess: (_data, bookingId) => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
     },
   });
 };

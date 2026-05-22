@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useBookings } from "../hooks/useBookings";
+import { useBookings, useCancelBooking } from "../hooks/useBookings";
 import { useAuth } from "../context/AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
@@ -8,6 +8,17 @@ export const Bookings: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { data: bookings, isLoading } = useBookings();
+  const { mutate: cancelBooking, isPending: isCancelling } = useCancelBooking();
+
+  const handleCancel = (bookingId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!window.confirm("Отменить это бронирование?")) {
+      return;
+    }
+
+    cancelBooking(bookingId);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -46,7 +57,7 @@ export const Bookings: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => {
-              const seatIds = booking.seat_ids ?? [];
+              const isPending = booking.status === "pending";
 
               return (
                 <div
@@ -60,12 +71,6 @@ export const Bookings: React.FC = () => {
                         Бронирование #{booking.id}
                       </p>
                       <div className="space-y-1 text-sm text-gray-400">
-                        <p>
-                          Места:{" "}
-                          {seatIds.length > 0
-                            ? seatIds.join(", ")
-                            : "не указаны"}
-                        </p>
                         <p>
                           Дата:{" "}
                           {new Date(
@@ -92,6 +97,15 @@ export const Bookings: React.FC = () => {
                         {booking.status === "paid" && "✓ Оплачено"}
                         {booking.status === "cancelled" && "✗ Отменено"}
                       </div>
+                      {isPending && (
+                        <button
+                          onClick={(event) => handleCancel(booking.id, event)}
+                          disabled={isCancelling}
+                          className="mt-2 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white text-sm font-medium rounded-lg transition"
+                        >
+                          Отменить
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

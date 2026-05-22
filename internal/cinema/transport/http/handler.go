@@ -381,6 +381,35 @@ func (h *handler) PurchaseBooking(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusAccepted)
 }
 
+func (h *handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getAuthenticatedUserID(r)
+	if !ok {
+		respondError(w, map[string]string{"code": "UNAUTHORIZED", "message": "Missing authenticated user"}, http.StatusUnauthorized)
+		return
+	}
+
+	bookingID := chi.URLParam(r, "id")
+	if bookingID == "" {
+		respondError(w, cinemaService.NewValidationError("booking id"), http.StatusBadRequest)
+		return
+	}
+
+	booking, err := h.uc.CancelBooking(r.Context(), userID, bookingID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"booking": booking,
+		"message": "booking cancelled",
+	}, http.StatusOK)
+}
+
 func (h *handler) GetBookingByID(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getAuthenticatedUserID(r)
 	if !ok {

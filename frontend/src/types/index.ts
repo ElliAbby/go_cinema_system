@@ -60,8 +60,11 @@ export interface Booking {
 
 export interface Ticket {
   id: string;
+  session_id: number;
+  session_start_time?: string;
+  seat_id: number;
   booking_id: string;
-  seat_number: number;
+  seat_number?: number;
   status: string;
   created_at?: string;
 }

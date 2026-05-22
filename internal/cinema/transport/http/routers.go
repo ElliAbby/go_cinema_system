@@ -78,6 +78,9 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 		r.Post("/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
 			JWTMiddleware(tokenManager, http.HandlerFunc(h.PurchaseBooking)).ServeHTTP(w, r)
 		})
+		r.Post("/{id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+			JWTMiddleware(tokenManager, http.HandlerFunc(h.CancelBooking)).ServeHTTP(w, r)
+		})
 	})
 
 	// Seats

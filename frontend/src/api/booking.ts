@@ -17,8 +17,17 @@ export const bookingApi = {
     return response.data.booking || response.data;
   },
 
-  purchaseBooking: async (id: string): Promise<{ booking?: Booking; message?: string }> => {
+  purchaseBooking: async (
+    id: string,
+  ): Promise<{ booking?: Booking; message?: string }> => {
     const response = await client.post(`/bookings/${id}/purchase`);
+    return response.data;
+  },
+
+  cancelBooking: async (
+    id: string,
+  ): Promise<{ booking?: Booking; message?: string }> => {
+    const response = await client.post(`/bookings/${id}/cancel`);
     return response.data;
   },
 

@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useBooking, usePurchaseBooking } from "../hooks/useBookings";
+import {
+  useBooking,
+  useCancelBooking,
+  usePurchaseBooking,
+} from "../hooks/useBookings";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
 export const BookingConfirm: React.FC = () => {
@@ -12,6 +16,7 @@ export const BookingConfirm: React.FC = () => {
   const { data: booking, isLoading } = useBooking(id);
   const { mutate: purchaseBooking, isPending: isProcessing } =
     usePurchaseBooking();
+  const { mutate: cancelBooking, isPending: isCancelling } = useCancelBooking();
 
   if (isLoading) return <FullPageLoader />;
 
@@ -40,6 +45,22 @@ export const BookingConfirm: React.FC = () => {
       },
       onError: () => {
         setIsPaying(false);
+      },
+    });
+  };
+
+  const handleCancel = () => {
+    if (
+      !window.confirm(
+        "Отменить это бронирование? Несохраненные места будут освобождены.",
+      )
+    ) {
+      return;
+    }
+
+    cancelBooking(booking.id, {
+      onSuccess: () => {
+        navigate("/bookings");
       },
     });
   };
@@ -108,13 +129,23 @@ export const BookingConfirm: React.FC = () => {
           </div>
 
           {booking.status === "pending" && (
-            <button
-              onClick={handlePayment}
-              disabled={isProcessing}
-              className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-semibold rounded-lg transition mb-4"
-            >
-              {isProcessing || isPaying ? "Обработка платежа..." : "Оплатить"}
-            </button>
+            <div className="space-y-3 mb-4">
+              <button
+                onClick={handlePayment}
+                disabled={isProcessing}
+                className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-semibold rounded-lg transition"
+              >
+                {isProcessing || isPaying ? "Обработка платежа..." : "Оплатить"}
+              </button>
+
+              <button
+                onClick={handleCancel}
+                disabled={isCancelling || isProcessing || isPaying}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold rounded-lg transition"
+              >
+                {isCancelling ? "Отмена..." : "Отменить бронирование"}
+              </button>
+            </div>
           )}
 
           <button
