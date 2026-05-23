@@ -78,3 +78,9 @@ Table Reservations {
     (seat_id, session_id) [pk] // Составной первичный ключ
   }
 }
+
+Table TestMessages {
+  id integer [primary key]
+  message text
+  created_at timestamp
+}

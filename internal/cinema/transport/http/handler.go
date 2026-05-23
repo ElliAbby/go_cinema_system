@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -616,4 +617,30 @@ func (h *handler) SlowEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, map[string]string{"message": msg}, http.StatusOK)
+}
+
+func (h *handler) DBTestEndpoint(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondError(w, cinemaService.ErrInvalidInput, http.StatusBadRequest)
+		return
+	}
+
+	message := string(body)
+	if message == "" {
+		respondError(w, cinemaService.NewValidationError("message"), http.StatusBadRequest)
+		return
+	}
+
+	id, err := h.uc.CreateTestMessage(r.Context(), message)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{"id": id, "message": message}, http.StatusCreated)
 }

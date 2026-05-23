@@ -444,3 +444,10 @@ func (uc *useCase) GetTestMessage(ctx context.Context) (string, error) {
 func (uc *useCase) GetSlowMessage(ctx context.Context) (string, error) {
 	return uc.repo.GetSlowMessage(ctx)
 }
+
+func (uc *useCase) CreateTestMessage(ctx context.Context, message string) (int, error) {
+	if message == "" {
+		return 0, cinema.NewValidationError("message")
+	}
+	return uc.repo.CreateTestMessage(ctx, message)
+}

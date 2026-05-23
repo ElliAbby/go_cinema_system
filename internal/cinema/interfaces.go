@@ -57,6 +57,7 @@ type Repository interface {
 	// Тестовые методы
 	GetTestMessage(ctx context.Context) (string, error)
 	GetSlowMessage(ctx context.Context) (string, error)
+	CreateTestMessage(ctx context.Context, message string) (int, error)
 }
 
 // UseCase определяет бизнес-логику
@@ -111,4 +112,5 @@ type UseCase interface {
 	// Тестовые методы
 	GetTestMessage(ctx context.Context) (string, error)
 	GetSlowMessage(ctx context.Context) (string, error)
+	CreateTestMessage(ctx context.Context, message string) (int, error)
 }

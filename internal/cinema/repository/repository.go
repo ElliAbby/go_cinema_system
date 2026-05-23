@@ -534,3 +534,12 @@ func (r *repo) GetTestMessage(ctx context.Context) (string, error) {
 func (r *repo) GetSlowMessage(ctx context.Context) (string, error) {
 	return "Slooooow text from Database", nil
 }
+
+func (r *repo) CreateTestMessage(ctx context.Context, message string) (int, error) {
+	var id int
+	query := `INSERT INTO test_messages (message) VALUES ($1) RETURNING id`
+	if err := r.postgresDB.QueryRowContext(ctx, query, message).Scan(&id); err != nil {
+		return 0, cinemaService.NewDatabaseError(err.Error())
+	}
+	return id, nil
+}

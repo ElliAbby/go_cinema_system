@@ -31,6 +31,7 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 
 	r.Get("/test", h.TestEndpoint)
 	r.Get("/slow", h.SlowEndpoint)
+	r.Post("/dbtest", h.DBTestEndpoint)
 
 	r.Route("/movies", func(r chi.Router) {
 		r.Get("/", h.GetAllMovies)
