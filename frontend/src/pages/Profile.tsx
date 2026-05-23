@@ -1,5 +1,4 @@
 import React from "react";
-import { useAuth } from "../context/AuthContext";
 import { useProfile } from "../hooks/useProfile";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
@@ -18,7 +17,6 @@ const getAccountStatus = (isActive?: boolean) => {
 };
 
 export const Profile: React.FC = () => {
-  const { user } = useAuth();
   const { data: profile, isLoading, isError } = useProfile();
 
   if (isLoading) {
@@ -51,90 +49,81 @@ export const Profile: React.FC = () => {
     : "Не указано";
   const accountStatus = getAccountStatus(profile.is_active);
   const avatarLetter = profile.email?.trim().charAt(0).toUpperCase() || "U";
-  const displayName =
-    profile.email?.split("@")[0] || `Пользователь #${profile.id}`;
+  const displayName = profile.email?.split("@")[0] || "Пользователь";
 
   return (
-    <div className="min-h-screen bg-dark-950 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 right-[-6rem] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="absolute top-40 left-[-8rem] h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
-      </div>
-
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-dark-950">
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white tracking-tight">
+            <p className="text-sm uppercase tracking-[0.24em] text-gray-500">
+              Account
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Мой профиль
             </h1>
-            <p className="mt-2 text-gray-400 max-w-2xl">
-              Личные данные аккаунта и текущий статус профиля.
+            <p className="mt-2 max-w-2xl text-sm text-gray-400 sm:text-base">
+              Аккаунт, контактные данные и статус доступа.
             </p>
           </div>
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-dark-700 bg-dark-800/80 px-4 py-2 text-sm text-gray-300 shadow-lg shadow-black/20 backdrop-blur">
+
+          <div
+            className={`inline-flex w-fit items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium ${accountStatus.className}`}
+          >
             <span
-              className={`h-2.5 w-2.5 rounded-full ${profile.is_active === false ? "bg-red-400" : "bg-emerald-400"}`}
+              className={`h-2 w-2 rounded-full ${profile.is_active === false ? "bg-red-400" : "bg-emerald-400"}`}
             />
             {accountStatus.label}
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <section className="relative overflow-hidden rounded-3xl border border-dark-700 bg-gradient-to-br from-dark-800 via-dark-800 to-dark-900 shadow-2xl shadow-black/30">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-amber-400 to-emerald-400" />
-            <div className="p-6 sm:p-8">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-amber-500 text-3xl font-bold text-white shadow-lg shadow-cyan-500/20">
-                  {avatarLetter}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-2xl font-semibold text-white break-words">
-                    {displayName}
-                  </h2>
-                  <p className="mt-1 text-gray-400 break-all">
-                    {profile.email}
-                  </p>
-                </div>
+        <section className="overflow-hidden rounded-3xl border border-white/8 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur">
+          <div className="border-b border-white/8 px-6 py-6 sm:px-8 sm:py-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03] text-2xl font-semibold text-white">
+                {avatarLetter}
               </div>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-dark-700 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
-                    Статус
-                  </p>
-                  <div
-                    className={`mt-3 inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${accountStatus.className}`}
-                  >
-                    {accountStatus.label}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-dark-700 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
-                    Телефон
-                  </p>
-                  <p className="mt-3 text-white font-medium">
-                    {profile.phone || "Не указан"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-dark-700 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
-                    Дата регистрации
-                  </p>
-                  <p className="mt-3 text-white font-medium">{createdAt}</p>
-                </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-2xl font-semibold text-white sm:text-[28px]">
+                  {displayName}
+                </h2>
+                <p className="mt-1 break-all text-sm text-gray-400 sm:text-base">
+                  {profile.email}
+                </p>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
 
-        {user && user.id !== profile.id && (
-          <p className="mt-6 text-sm text-yellow-400">
-            Профиль загружен по токену, локальный user id отличается.
-          </p>
-        )}
+          <div className="grid gap-4 p-6 sm:p-8 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/8 bg-black/20 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                Телефон
+              </p>
+              <p className="mt-3 text-base font-medium text-white">
+                {profile.phone || "Не указан"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-black/20 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                Регистрация
+              </p>
+              <p className="mt-3 text-base font-medium text-white">
+                {createdAt}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-black/20 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                Обновлен
+              </p>
+              <p className="mt-3 text-base font-medium text-white">
+                {updatedAt}
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

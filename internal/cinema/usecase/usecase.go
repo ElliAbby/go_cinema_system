@@ -130,6 +130,13 @@ func (uc *useCase) GetHallsByCinema(ctx context.Context, cinemaID int) ([]cinema
 	return uc.repo.GetHallsByCinema(ctx, cinemaID)
 }
 
+func (uc *useCase) GetHallByID(ctx context.Context, id int) (*cinema.Hall, error) {
+	if id <= 0 {
+		return nil, cinema.NewValidationError("hall id")
+	}
+	return uc.repo.GetHallByID(ctx, id)
+}
+
 func (uc *useCase) GetSeatsByHall(ctx context.Context, hallID int) ([]cinema.Seat, error) {
 	if hallID <= 0 {
 		return nil, cinema.NewValidationError("hall id")
@@ -222,6 +229,7 @@ func (uc *useCase) CreateBooking(ctx context.Context, userID int, req *cinema.Cr
 
 	booking.ExpiresAt = booking.CreatedAt.Add(reservationHoldDuration)
 	booking.SeatIDs = append([]int(nil), req.SeatIDs...)
+	booking.SessionID = req.SessionID
 
 	return booking, nil
 }

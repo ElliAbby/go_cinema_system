@@ -52,6 +52,7 @@ export interface Session {
 export interface Booking {
   id: string;
   user_id: number;
+  session_id?: number;
   total_price: number;
   status: "pending" | "paid" | "cancelled" | "refunded";
   seat_ids?: number[];

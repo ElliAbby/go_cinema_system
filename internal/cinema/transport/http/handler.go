@@ -214,6 +214,25 @@ func (h *handler) GetHallsByCinema(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, halls, http.StatusOK)
 }
 
+func (h *handler) GetHallByID(w http.ResponseWriter, r *http.Request) {
+	id, err := getIDFromURL(r, "id")
+	if err != nil {
+		respondError(w, cinemaService.NewValidationError("hall id"), 400)
+		return
+	}
+
+	hall, err := h.uc.GetHallByID(r.Context(), id)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+	respondJSON(w, hall, http.StatusOK)
+}
+
 // Эндпоинты для сессий
 func (h *handler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
 	sessions, err := h.uc.GetAllSessions(r.Context())

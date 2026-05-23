@@ -309,6 +309,19 @@ func (r *repo) GetBookingByID(ctx context.Context, userID int, bookingID string)
 		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
 
+	var sessionID int
+    sessionQuery := `
+    SELECT COALESCE(
+        (SELECT r.session_id FROM reservations r WHERE r.booking_id = $1 LIMIT 1),
+        (SELECT t.session_id FROM tickets t WHERE t.booking_id = $1 LIMIT 1),
+        0
+    ) AS session_id`
+    
+    if err := r.postgresDB.GetContext(ctx, &sessionID, sessionQuery, bookingID); err != nil {
+        return nil, cinemaService.NewNotFoundError("session")
+    }
+    booking.SessionID = sessionID
+
 	seatIDsQuery := `
 	SELECT DISTINCT seat_id FROM (
 		SELECT seat_id FROM reservations WHERE booking_id = $1

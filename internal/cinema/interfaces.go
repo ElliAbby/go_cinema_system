@@ -75,6 +75,7 @@ type UseCase interface {
 
 	// Залы
 	GetHallsByCinema(ctx context.Context, cinemaID int) ([]Hall, error)
+	GetHallByID(ctx context.Context, id int) (*Hall, error)
 
 	// Сессии
 	GetAllSessions(ctx context.Context) ([]Session, error)

@@ -56,6 +56,10 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 		r.Get("/{id}/halls", h.GetHallsByCinema)
 	})
 
+	// Seats and halls
+	r.Get("/halls/{id}", h.GetHallByID)
+	r.Get("/halls/{id}/seats", h.GetSeatsByHall)
+
 	r.Route("/sessions", func(r chi.Router) {
 		r.Get("/", h.GetAllSessions)
 		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
@@ -82,9 +86,6 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 			JWTMiddleware(tokenManager, http.HandlerFunc(h.CancelBooking)).ServeHTTP(w, r)
 		})
 	})
-
-	// Seats
-	r.Get("/halls/{id}/seats", h.GetSeatsByHall)
 
 	r.Route("/users", func(r chi.Router) {
 		r.Get("/", h.ListUsers)

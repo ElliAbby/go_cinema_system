@@ -29,6 +29,11 @@ export const cinemaApi = {
     return response.data || [];
   },
 
+  getHall: async (id: number): Promise<Hall> => {
+    const response = await client.get(`/halls/${id}`);
+    return response.data;
+  },
+
   // Sessions
   getSessions: async (): Promise<Session[]> => {
     const response = await client.get("/sessions");

@@ -59,6 +59,7 @@ type User struct {
 type Booking struct {
 	ID         string    `json:"id" db:"id"`
 	UserID     int       `json:"user_id" db:"user_id"`
+	SessionID  int       `json:"session_id" db:"-"`
 	TotalPrice float64   `json:"total_price" db:"total_price"`
 	Status     string    `json:"status" db:"status"` // pending, paid, cancelled, refunded
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
