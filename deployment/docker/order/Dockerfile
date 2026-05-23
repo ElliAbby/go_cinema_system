@@ -19,4 +19,6 @@ RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=builder /bin/order-service /app/order-service
 
+EXPOSE 8081
+
 CMD ["/app/order-service"]

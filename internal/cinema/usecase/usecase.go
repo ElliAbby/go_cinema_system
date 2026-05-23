@@ -218,10 +218,10 @@ func (uc *useCase) CreateBooking(ctx context.Context, userID int, req *cinema.Cr
 		metrics.IncBookingErrors("create_booking_failed")
 		return nil, err
 	}
+	metrics.IncActiveBookings()
 
 	booking.ExpiresAt = booking.CreatedAt.Add(reservationHoldDuration)
 	booking.SeatIDs = append([]int(nil), req.SeatIDs...)
-	metrics.IncActiveBookings()
 
 	return booking, nil
 }
@@ -297,6 +297,7 @@ func (uc *useCase) CancelBooking(ctx context.Context, userID int, bookingID stri
 		metrics.IncBookingErrors("cancel_booking_failed")
 		return nil, err
 	}
+	metrics.DecActiveBookings()
 
 	booking.Status = "cancelled"
 	return booking, nil

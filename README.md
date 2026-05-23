@@ -19,6 +19,8 @@ APP_ADDR=:8080
 APP_READ_TIMEOUT=10s
 APP_WRITE_TIMEOUT=10s
 APP_SHUTDOWN_TIMEOUT=15s
+APP_METRICS_ADDR=:8081
+APP_ENV=local
 
 DB_HOST=localhost
 DB_PORT=5432
@@ -59,12 +61,14 @@ docker compose exec postgres psql -U postgres -d cinema -c "select * from cinema
 
 После `docker compose up -d --build` доступны:
 
-| Сервис     | URL                           | Описание                               |
-| ---------- | ----------------------------- | -------------------------------------- |
-| Приложение | http://localhost:8080         | Само приложение                        |
-| Метрики    | http://localhost:8080/metrics | Метрики приложения (Prometheus format) |
-| Kafka UI   | http://localhost:8090         | Управление топиками и сообщениями      |
-| Prometheus | http://localhost:9090         | Запросы к метрикам (PromQL)            |
+| Сервис         | URL                           | Описание                                 |
+| -------------- | ----------------------------- | ---------------------------------------- |
+| Приложение     | http://localhost:8080         | Само приложение                          |
+| Метрики        | http://localhost:8080/metrics | Метрики приложения (Prometheus format)   |
+| Worker метрики | http://localhost:8081/metrics | Метрики Kafka worker (Prometheus format) |
+| Kafka UI       | http://localhost:8090         | Управление топиками и сообщениями        |
+| Prometheus     | http://localhost:9090         | Запросы к метрикам (PromQL)              |
+| Grafana        | http://localhost:3002         | Интерфейс Grafana дашбордов              |
 
 Чтобы остановить и удалить контейнеры:
 

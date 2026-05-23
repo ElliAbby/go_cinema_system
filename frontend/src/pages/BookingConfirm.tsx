@@ -80,7 +80,7 @@ export const BookingConfirm: React.FC = () => {
             <h1 className="text-3xl font-bold text-white mb-2">
               Бронирование создано
             </h1>
-            <p className="text-gray-400">Номер бронирования: #{booking.id}</p>
+            {/* <p className="text-gray-400">Номер бронирования: #{booking.id}</p> */}
           </div>
 
           <div className="space-y-6 mb-8">

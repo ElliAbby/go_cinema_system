@@ -29,8 +29,6 @@ func main() {
 	log.Printf("Конфигурация сервера: %+v", cfg.Server)
 
 	tokenManager := authjwt.New(cfg.JWT.SecretKey)
-	metrics.InitMetrics()
-	log.Println("Метрики инициализированы")
 
 	db, err := postgres.NewPostgresDB(&cfg.DB)
 	if err != nil {
@@ -48,12 +46,15 @@ func main() {
 	defer publisher.Close()
 	log.Println("Kafka publisher инициализирован")
 
-	// Заполняем БД тестовыми данными если она пуста
 	if err := postgres.SeedDatabase(db); err != nil {
 		log.Printf("Ошибка при загрузке seed-данных: %v", err)
 		return
 	}
 	log.Println("Seed-данные успешно загружены (если требовалось)")
+
+	metrics.InitMetrics(db, "cinema-service")
+	metrics.InitKafkaMetrics("cinema-service", cfg.Kafka.BookingPaymentsTopic)
+	log.Println("Метрики инициализированы")
 
 	repo := repository.New(db)
 	uc := usecase.New(repo, publisher, tokenManager)

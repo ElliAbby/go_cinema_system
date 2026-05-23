@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+
+	"github.com/ElliAbby/go_cinema_system/internal/platform/metrics"
 )
 
 type PaymentRequestedEvent struct {
@@ -18,6 +20,7 @@ type PaymentRequestedEvent struct {
 
 type Publisher struct {
 	writer *kafka.Writer
+	topic  string
 }
 
 func NewPublisher(brokers []string, topic string) (*Publisher, error) {
@@ -35,6 +38,7 @@ func NewPublisher(brokers []string, topic string) (*Publisher, error) {
 			RequiredAcks: kafka.RequireOne,
 			Async:        false,
 		},
+		topic: topic,
 	}, nil
 }
 
@@ -50,13 +54,23 @@ func (p *Publisher) PublishPaymentRequested(ctx context.Context, event PaymentRe
 		return fmt.Errorf("kafka publisher is not initialized")
 	}
 
+	startedAt := time.Now()
+	defer metrics.ObserveKafkaProducerDeliveryDuration(p.topic, time.Since(startedAt).Seconds())
+
 	body, err := json.Marshal(event)
 	if err != nil {
+		metrics.IncKafkaProducerErrors(p.topic, "marshal_error")
 		return err
 	}
 
-	return p.writer.WriteMessages(ctx, kafka.Message{
+	if err := p.writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(event.BookingID),
 		Value: body,
-	})
+	}); err != nil {
+		metrics.IncKafkaProducerErrors(p.topic, "write_error")
+		return err
+	}
+
+	metrics.IncKafkaMessagesProduced(p.topic)
+	return nil
 }

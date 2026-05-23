@@ -1,0 +1,655 @@
+{
+  "uid": "kafka-metrics",
+  "title": "Kafka Integration Metrics",
+  "tags": ["kafka", "integration", "go", "prometheus"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "editable": true,
+  "graphTooltip": 1,
+  "style": "dark",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "app",
+        "type": "query",
+        "label": "Service",
+        "query": "label_values(kafka_messages_received_total, app)",
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 1,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        }
+      },
+      {
+        "name": "env",
+        "type": "query",
+        "label": "Environment",
+        "query": "label_values(kafka_messages_received_total{app=~\"$app\"}, env)",
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 1,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        }
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "label": "Instance",
+        "query": "label_values(kafka_messages_received_total{app=~\"$app\", env=~\"$env\"}, instance)",
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 1,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        }
+      },
+      {
+        "name": "topic",
+        "type": "query",
+        "label": "Topic",
+        "query": "label_values(kafka_messages_received_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\"}, topic)",
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 1,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "Kafka Consumer metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_messages_received_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} received",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (topic) (rate(kafka_messages_processed_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} processed",
+          "refId": "B"
+        }
+      ],
+      "title": "Message throughput (consumer)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_messages_failed_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} failed",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (topic) (rate(kafka_message_retries_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} retries",
+          "refId": "B"
+        },
+        {
+          "expr": "sum by (topic) (rate(kafka_consumer_errors_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} consumer errors",
+          "refId": "C"
+        }
+      ],
+      "title": "Consumer errors and retries",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_message_processing_duration_seconds_sum{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m])) / sum by (topic) (rate(kafka_message_processing_duration_seconds_count{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} avg",
+          "refId": "A"
+        }
+      ],
+      "title": "Average processing duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(kafka_message_processing_duration_seconds_bucket{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m])) by (le))",
+          "legendFormat": "{{topic}} p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(kafka_message_processing_duration_seconds_bucket{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m])) by (le))",
+          "legendFormat": "{{topic}} p99",
+          "refId": "B"
+        }
+      ],
+      "title": "Processing duration percentiles",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 6,
+      "panels": [],
+      "title": "Kafka Producer metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_messages_produced_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} produced",
+          "refId": "A"
+        }
+      ],
+      "title": "Messages produced throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_producer_delivery_duration_seconds_sum{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m])) / sum by (topic) (rate(kafka_producer_delivery_duration_seconds_count{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} avg",
+          "refId": "A"
+        }
+      ],
+      "title": "Average producer delivery duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(kafka_producer_delivery_duration_seconds_bucket{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m])) by (le))",
+          "legendFormat": "{{topic}} p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(kafka_producer_delivery_duration_seconds_bucket{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m])) by (le))",
+          "legendFormat": "{{topic}} p99",
+          "refId": "B"
+        }
+      ],
+      "title": "Producer delivery duration percentiles",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_producer_errors_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "{{topic}} producer errors",
+          "refId": "A"
+        }
+      ],
+      "title": "Producer errors",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 11,
+      "panels": [],
+      "title": "Error analysis",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "pieType": "pie",
+        "displayLabels": ["percent", "name"]
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(kafka_messages_failed_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[$__range])) by (error_type)",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Failed messages by error type",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "pieType": "pie",
+        "displayLabels": ["percent", "name"]
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(kafka_consumer_errors_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[$__range])) by (error_type)",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Consumer errors by type",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 35
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "pieType": "pie",
+        "displayLabels": ["percent", "name"]
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(kafka_producer_errors_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\", topic=~\"$topic\"}[$__range])) by (error_type)",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Producer errors by type",
+      "type": "piechart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 15,
+      "panels": [],
+      "title": "Skipped messages",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (service) (rate(messages_skipped_total{app=~\"$app\", env=~\"$env\", instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Skipped messages rate by service",
+      "type": "timeseries"
+    }
+  ],
+  "timepicker": {},
+  "version": 1
+}

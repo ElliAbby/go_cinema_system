@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/ElliAbby/go_cinema_system/internal/order"
+	"github.com/ElliAbby/go_cinema_system/internal/platform/metrics"
 
 )
 
@@ -21,6 +22,10 @@ func (uc *useCase) ProcessPayment(ctx context.Context, userID int, bookingID str
 	if err != nil {
 		return nil, nil, err
 	}
+
+	metrics.DecActiveBookings()
+	metrics.AddTicketsSold(float64(len(tickets)))
+	metrics.AddRevenue(booking.TotalPrice)
 
 	log.Printf("Payment processed: booking=%s, user=%d, tickets=%d, amount=%.2f", booking.ID, userID, len(tickets), booking.TotalPrice)
 	return booking, tickets, nil

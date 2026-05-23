@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 
+	"github.com/ElliAbby/go_cinema_system/internal/platform/metrics"
 	"github.com/segmentio/kafka-go"
 
 	"github.com/ElliAbby/go_cinema_system/internal/order"
@@ -15,11 +16,14 @@ type WorkerConfig struct {
 	Brokers []string
 	Topic   string
 	GroupID string
+	ServiceName string
 }
 
 type Worker struct {
-	reader *kafka.Reader
-	uc     order.UseCase
+	reader      *kafka.Reader
+	uc          order.UseCase
+	topic       string
+	serviceName string
 }
 
 func New(cfg WorkerConfig, uc order.UseCase) *Worker {
@@ -33,8 +37,10 @@ func New(cfg WorkerConfig, uc order.UseCase) *Worker {
 	})
 
 	return &Worker{
-		reader: reader,
-		uc:     uc,
+		reader:      reader,
+		uc:          uc,
+		topic:       cfg.Topic,
+		serviceName: cfg.ServiceName,
 	}
 }
 
@@ -49,16 +55,23 @@ func (w *Worker) Start(ctx context.Context) error {
 				return nil
 			}
 			log.Printf("Kafka fetch error: %v", err)
+			metrics.IncKafkaConsumerErrors(w.topic, "fetch_error")
 			continue
 		}
 
-		if err := handlePaymentMessage(ctx, w.uc, msg.Value); err != nil {
+		metrics.IncKafkaMessagesReceived(w.topic)
+
+		if err := handlePaymentMessage(ctx, w.topic, w.serviceName, w.uc, msg.Value); err != nil {
 			log.Printf("Payment message processing error: %v", err)
+			metrics.IncKafkaMessagesFailed(w.topic, "processing_error")
 			continue
 		}
+
+		metrics.IncKafkaMessagesProcessed(w.topic)
 
 		if err := w.reader.CommitMessages(ctx, msg); err != nil {
 			log.Printf("Kafka commit error: %v", err)
+			metrics.IncKafkaConsumerErrors(w.topic, "commit_error")
 		}
 	}
 }

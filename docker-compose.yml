@@ -108,11 +108,14 @@ services:
       KAFKA_BROKERS: kafka:9092
       KAFKA_BOOKING_PAYMENTS_TOPIC: booking.payments
       KAFKA_BOOKING_PAYMENTS_GROUP: cinema-order-service
+      APP_METRICS_ADDR: ":8081"
     depends_on:
       kafka:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    ports:
+      - "8081:8081"
 
   prometheus:
     image: prom/prometheus:v2.51.0
@@ -121,10 +124,30 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./helpers/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
       - cinema-service
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: grafana
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./helpers/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./helpers/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started
 
 volumes:
   postgres_data:
   prometheus_data:
+  grafana_data:

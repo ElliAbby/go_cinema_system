@@ -68,7 +68,7 @@ export const Bookings: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-lg font-semibold text-white mb-2">
-                        Бронирование #{booking.id}
+                        Бронирование
                       </p>
                       <div className="space-y-1 text-sm text-gray-400">
                         <p>

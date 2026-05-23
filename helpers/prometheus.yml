@@ -7,4 +7,5 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets:
-          - app:8080
+          - cinema-service:8080
+          - order-service:8081

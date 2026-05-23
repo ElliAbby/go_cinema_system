@@ -50,8 +50,9 @@ type Config struct {
 }
 
 type WorkerConfig struct {
-	DB    DBConfig
-	Kafka KafkaConfig
+	DB          DBConfig
+	Kafka       KafkaConfig
+	MetricsAddr string
 }
 
 func Load() (Config, error) {
@@ -99,6 +100,8 @@ func LoadWorkerConfig() (WorkerConfig, error) {
 	if err != nil {
 		return WorkerConfig{}, err
 	}
+
+	cfg.MetricsAddr = getEnvOrDefault("APP_METRICS_ADDR", ":8081")
 
 	return cfg, nil
 }
@@ -201,6 +204,14 @@ func getEnv(key string) (string, error) {
 		return "", fmt.Errorf("environment variable %s is not set", key)
 	}
 	return v, nil
+}
+
+func getEnvOrDefault(key string, defaultValue string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok || strings.TrimSpace(value) == "" {
+		return defaultValue
+	}
+	return value
 }
 
 func getDurationEnv(key string) (time.Duration, error) {
