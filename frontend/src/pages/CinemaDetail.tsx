@@ -76,26 +76,6 @@ export const CinemaDetail: React.FC = () => {
                 <h3 className="text-xl font-semibold text-white mb-4">
                   {hall.name}
                 </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-400">Рядов</p>
-                    <p className="text-2xl font-bold text-blue-400">
-                      {hall.rows}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400">Мест в ряду</p>
-                    <p className="text-2xl font-bold text-blue-400">
-                      {hall.seats_per_row}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-gray-400">Всего мест</p>
-                    <p className="text-2xl font-bold text-purple-400">
-                      {hall.total_seats}
-                    </p>
-                  </div>
-                </div>
                 <button className="w-full mt-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
                   Посмотреть сеансы
                 </button>

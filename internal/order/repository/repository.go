@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 
@@ -40,7 +42,7 @@ func (r *repo) PurchaseBooking(ctx context.Context, userID int, bookingID string
 	}
 
 	var reservations []order.Reservation
-	reservationQuery := `SELECT seat_id, session_id, user_id, booking_id FROM reservations WHERE booking_id = $1 FOR UPDATE`
+	reservationQuery := `SELECT seat_id, session_id, user_id, booking_id, locked_until FROM reservations WHERE booking_id = $1 FOR UPDATE`
 	if err := tx.SelectContext(ctx, &reservations, reservationQuery, bookingID); err != nil {
 		return nil, nil, err
 	}
@@ -48,7 +50,28 @@ func (r *repo) PurchaseBooking(ctx context.Context, userID int, bookingID string
 		return nil, nil, sql.ErrNoRows
 	}
 
-	// TODO добавить временную проверку (данные о locked_until)
+	// временная проверка (данные о locked_until)
+	var now time.Time
+	if err := tx.GetContext(ctx, &now, `SELECT NOW()`); err != nil {
+		return nil, nil, err
+	}
+
+	for _, res := range reservations {
+		if res.LockedUntil != nil && res.LockedUntil.Before(now) {
+			_, errCleanup := tx.ExecContext(ctx, `DELETE FROM reservations WHERE booking_id = $1`, bookingID)
+			if errCleanup != nil {
+				return nil, nil, fmt.Errorf("cleanup failed: %w", errCleanup)
+			}
+			_, errStatus := tx.ExecContext(ctx, `UPDATE bookings SET status = 'cancelled' WHERE id = $1`, bookingID)
+			if errStatus != nil {
+				return nil, nil, fmt.Errorf("status update failed: %w", errStatus)
+			}
+			if err := tx.Commit(); err != nil {
+				return nil, nil, err
+			}
+			return nil, nil, order.ErrReservationExpired
+		}
+	}
 
 	tickets := make([]order.Ticket, 0, len(reservations))
 	ticketQuery := `INSERT INTO tickets (session_id, seat_id, booking_id, status) VALUES ($1, $2, $3, $4) ON CONFLICT (session_id, seat_id) DO NOTHING RETURNING id`

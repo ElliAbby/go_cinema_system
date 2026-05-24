@@ -1,5 +1,7 @@
 package order
 
+import "time"
+
 type Booking struct {
 	ID         string  `json:"id" db:"id"`
 	UserID     int     `json:"user_id" db:"user_id"`
@@ -16,8 +18,9 @@ type Ticket struct {
 }
 
 type Reservation struct {
-	SeatID      int    `db:"seat_id"`
-	SessionID   int    `db:"session_id"`
-	UserID      int    `db:"user_id"`
-	BookingID   string `db:"booking_id"`
+	SeatID      int        `db:"seat_id"`
+	SessionID   int        `db:"session_id"`
+	UserID      int        `db:"user_id"`
+	BookingID   string     `db:"booking_id"`
+	LockedUntil *time.Time `db:"locked_until"`
 }

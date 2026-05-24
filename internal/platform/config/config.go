@@ -43,10 +43,11 @@ func (c *DBConfig) DSN() string {
 }
 
 type Config struct {
-	Server ServerConfig
-	DB     DBConfig
-	JWT    JWTConfig
-	Kafka  KafkaConfig
+	Server                  ServerConfig
+	DB                      DBConfig
+	JWT                     JWTConfig
+	Kafka                   KafkaConfig
+	ReservationHoldDuration time.Duration
 }
 
 type WorkerConfig struct {
@@ -83,6 +84,11 @@ func Load() (Config, error) {
 	cfg.Kafka, err = LoadKafkaConfig()
 	if err != nil {
 		log.Printf("Не удалось загрузить конфигурацию Kafka: %v", err)
+		return Config{}, err
+	}
+	cfg.ReservationHoldDuration, err = getDurationEnvOrDefault("RESERVATION_HOLD_DURATION", 1*time.Minute)
+	if err != nil {
+		log.Printf("Не удалось загрузить длительность резерва: %v", err)
 		return Config{}, err
 	}
 	return cfg, nil
@@ -228,6 +234,23 @@ func getDurationEnv(key string) (time.Duration, error) {
 	duration, err := time.ParseDuration(value)
 	if err != nil {
 		return 0, fmt.Errorf("Ошибка при парсинге длительности.: %w", err)
+	}
+
+	return duration, nil
+}
+
+func getDurationEnvOrDefault(key string, defaultValue time.Duration) (time.Duration, error) {
+	value, ok := os.LookupEnv(key)
+	if !ok || strings.TrimSpace(value) == "" {
+		return defaultValue, nil
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("Ошибка при парсинге длительности.: %w", err)
+	}
+	if duration <= 0 {
+		return 0, fmt.Errorf("environment variable %s must be greater than zero", key)
 	}
 
 	return duration, nil

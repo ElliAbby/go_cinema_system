@@ -17,16 +17,15 @@ type useCase struct {
 	repo         cinema.Repository
 	publisher    PaymentPublisher
 	tokenManager *authjwt.Manager
+	reservationHoldDuration time.Duration
 }
 
 type PaymentPublisher interface {
 	PublishPaymentRequested(ctx context.Context, event cinemaKafka.PaymentRequestedEvent) error
 }
 
-const reservationHoldDuration = 15 * time.Minute
-
-func New(r cinema.Repository, publisher PaymentPublisher, tokenManager *authjwt.Manager) *useCase {
-	return &useCase{repo: r, publisher: publisher, tokenManager: tokenManager}
+func New(r cinema.Repository, publisher PaymentPublisher, tokenManager *authjwt.Manager, reservationHoldDuration time.Duration) *useCase {
+	return &useCase{repo: r, publisher: publisher, tokenManager: tokenManager, reservationHoldDuration: reservationHoldDuration}
 }
 
 // Фильмы
@@ -234,7 +233,7 @@ func (uc *useCase) CreateBooking(ctx context.Context, userID int, req *cinema.Cr
 	}
 	metrics.IncActiveBookings()
 
-	booking.ExpiresAt = booking.CreatedAt.Add(reservationHoldDuration)
+	booking.ExpiresAt = booking.CreatedAt.Add(uc.reservationHoldDuration)
 	booking.SeatIDs = append([]int(nil), req.SeatIDs...)
 	booking.SessionID = req.SessionID
 

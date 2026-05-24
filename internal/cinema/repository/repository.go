@@ -13,11 +13,12 @@ import (
 )
 
 type repo struct {
- 	postgresDB *sqlx.DB
+	postgresDB              *sqlx.DB
+	reservationHoldDuration time.Duration
 }
 
-func New(postgresDB *sqlx.DB) *repo {
-	return &repo{postgresDB: postgresDB}
+func New(postgresDB *sqlx.DB, reservationHoldDuration time.Duration) *repo {
+	return &repo{postgresDB: postgresDB, reservationHoldDuration: reservationHoldDuration}
 }
 
 // Работа с фильмами
@@ -275,7 +276,7 @@ func (r *repo) CreateBooking(ctx context.Context, userID int, req *cinemaService
 		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
 
-	lockedUntil := time.Now().Add(15 * time.Minute)
+	lockedUntil := time.Now().Add(r.reservationHoldDuration)
 	reservationQuery := `INSERT INTO reservations (seat_id, session_id, user_id, booking_id, locked_until) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (seat_id, session_id) DO NOTHING RETURNING seat_id`
 	for _, seatID := range req.SeatIDs {
 		var insertedSeatID int

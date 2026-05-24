@@ -56,8 +56,8 @@ func main() {
 	metrics.InitKafkaMetrics("cinema-service", cfg.Kafka.BookingPaymentsTopic)
 	log.Println("Метрики инициализированы")
 
-	repo := repository.New(db)
-	uc := usecase.New(repo, publisher, tokenManager)
+	repo := repository.New(db, cfg.ReservationHoldDuration)
+	uc := usecase.New(repo, publisher, tokenManager, cfg.ReservationHoldDuration)
 	handler := cinemaHttp.New(uc)
 	routers := cinemaHttp.RegisterRouters(handler, tokenManager)
 

@@ -28,6 +28,12 @@ func handlePaymentMessage(ctx context.Context, topic string, serviceName string,
 
 	booking, tickets, err := uc.ProcessPayment(ctx, event.UserID, event.BookingID)
 	if err != nil {
+		if errors.Is(err, order.ErrReservationExpired) {
+			log.Printf("Бронирование %s отменено из-за истечения времени резерва", event.BookingID)
+			metrics.IncMessagesSkipped(serviceName)
+			return nil
+		}
+
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Printf("Бронирование %s уже обработано или не найдено", event.BookingID)
 			metrics.IncMessagesSkipped(serviceName)
