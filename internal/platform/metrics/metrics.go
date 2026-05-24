@@ -180,7 +180,7 @@ func refreshBusinessMetrics(db *sqlx.DB) {
 			COALESCE((SELECT COUNT(*) FROM sessions), 0) AS sessions_active
 	`
 	if err := db.GetContext(ctx, &snapshot, query); err != nil {
-		log.Printf("Failed to refresh business metrics: %v", err)
+		log.Printf("Не удалось обновить бизнес-метрики: %v", err)
 		return
 	}
 

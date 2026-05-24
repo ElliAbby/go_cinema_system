@@ -45,16 +45,16 @@ func New(cfg WorkerConfig, uc order.UseCase) *Worker {
 }
 
 func (w *Worker) Start(ctx context.Context) error {
-	log.Println("Order worker started, listening for payment messages")
+	log.Println("Воркер заказов запущен, ожидает сообщений об оплате")
 
 	for {
 		msg, err := w.reader.FetchMessage(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				log.Println("Order worker stopped")
+				log.Println("Воркер заказов остановлен")
 				return nil
 			}
-			log.Printf("Kafka fetch error: %v", err)
+			log.Printf("Ошибка при получении сообщения из Kafka: %v", err)
 			metrics.IncKafkaConsumerErrors(w.topic, "fetch_error")
 			continue
 		}
@@ -64,7 +64,7 @@ func (w *Worker) Start(ctx context.Context) error {
 		processCtx := context.Background()
 
 		if err := handlePaymentMessage(processCtx, w.topic, w.serviceName, w.uc, msg.Value); err != nil {
-			log.Printf("Payment message processing error: %v", err)
+			log.Printf("Ошибка обработки сообщения об оплате: %v", err)
 			metrics.IncKafkaMessagesFailed(w.topic, "processing_error")
 			continue
 		}
@@ -72,7 +72,7 @@ func (w *Worker) Start(ctx context.Context) error {
 		metrics.IncKafkaMessagesProcessed(w.topic)
 
 		if err := w.reader.CommitMessages(processCtx, msg); err != nil {
-			log.Printf("Kafka commit error: %v", err)
+			log.Printf("Ошибка фиксации смещения в Kafka: %v", err)
 			metrics.IncKafkaConsumerErrors(w.topic, "commit_error")
 		}
 	}

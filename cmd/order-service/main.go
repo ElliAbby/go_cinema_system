@@ -20,23 +20,23 @@ import (
 func main() {
 	cfg, err := config.LoadWorkerConfig()
 	if err != nil {
-		log.Fatalf("Failed to load worker config: %v", err)
+		log.Fatalf("Не удалось загрузить конфигурацию воркера: %v", err)
 	}
 
 	db, err := postgres.NewPostgresDB(&cfg.DB)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
 	}
 	defer db.Close()
-	log.Println("Order Service: connected to database")
+	log.Println("Сервис заказов: подключение к базе данных установлено")
 
 	repo := orderRepo.New(db)
 	uc := orderUseCase.New(repo)
 
 	metrics.InitMetrics(db, "order-service")
-	log.Println("Order service business metrics initialized")
+	log.Println("Бизнес-метрики сервиса заказов инициализированы")
 	metrics.InitKafkaMetrics("order-service", cfg.Kafka.BookingPaymentsTopic)
-	log.Println("Order service metrics initialized")
+	log.Println("Метрики сервиса заказов инициализированы")
 
 	metricsServer := &http.Server{
 		Addr:    cfg.MetricsAddr,
@@ -44,9 +44,9 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("Order service metrics exposed on %s", cfg.MetricsAddr)
+		log.Printf("Метрики сервиса заказов доступны на %s", cfg.MetricsAddr)
 		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Metrics server error: %v", err)
+			log.Printf("Ошибка сервера метрик: %v", err)
 		}
 	}()
 
@@ -62,12 +62,12 @@ func main() {
 	defer stop()
 
 	if err := w.Start(ctx); err != nil {
-		log.Fatalf("Worker error: %v", err)
+		log.Fatalf("Ошибка воркера: %v", err)
 	}
 
 	shutDownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	if err := metricsServer.Shutdown(shutDownCtx); err != nil {
-		log.Printf("Metrics server shutdown error: %v", err)
+		log.Printf("Ошибка при остановке сервера метрик: %v", err)
 	}
 }

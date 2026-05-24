@@ -27,6 +27,6 @@ func (uc *useCase) ProcessPayment(ctx context.Context, userID int, bookingID str
 	metrics.AddTicketsSold(float64(len(tickets)))
 	metrics.AddRevenue(booking.TotalPrice)
 
-	log.Printf("Payment processed: booking=%s, user=%d, tickets=%d, amount=%.2f", booking.ID, userID, len(tickets), booking.TotalPrice)
+	log.Printf("Оплата обработана: бронирование=%s, пользователь=%d, билетов=%d, сумма=%.2f", booking.ID, userID, len(tickets), booking.TotalPrice)
 	return booking, tickets, nil
 }
