@@ -12,6 +12,7 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { MovieDetail } from "./pages/MovieDetail";
 import { CinemaDetail } from "./pages/CinemaDetail";
+import { HallDetail } from "./pages/HallDetail";
 import { Booking } from "./pages/Booking";
 import { BookingConfirm } from "./pages/BookingConfirm";
 import { Bookings } from "./pages/Bookings";
@@ -29,6 +30,10 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/cinemas" element={<Cinemas />} />
             <Route path="/cinema/:id" element={<CinemaDetail />} />
+            <Route
+              path="/cinema/:cinemaId/hall/:hallId"
+              element={<HallDetail />}
+            />
             <Route path="/movie/:id" element={<MovieDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

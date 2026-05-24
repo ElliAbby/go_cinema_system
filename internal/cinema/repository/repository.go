@@ -527,7 +527,7 @@ func (r *repo) RefreshExpiredTickets(ctx context.Context, userID int) error {
 
 func (r *repo) GetAllTickets(ctx context.Context, userID int) ([]cinemaService.Ticket, error) {
 	var tickets []cinemaService.Ticket
-	query := `SELECT t.id, t.session_id, s.start_time AS session_start_time, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id JOIN sessions s ON s.id = t.session_id WHERE b.user_id = $1 ORDER BY t.id`
+	query := `SELECT t.id, t.session_id, s.start_time AS session_start_time, se.row_number, se.seat_number, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id JOIN sessions s ON s.id = t.session_id JOIN seats se ON se.id = t.seat_id WHERE b.user_id = $1 ORDER BY t.id`
 	if err := r.postgresDB.SelectContext(ctx, &tickets, query, userID); err != nil {
 		return nil, cinemaService.NewDatabaseError(err.Error())
 	}
@@ -536,7 +536,7 @@ func (r *repo) GetAllTickets(ctx context.Context, userID int) ([]cinemaService.T
 
 func (r *repo) GetTicketByID(ctx context.Context, userID int, ticketID int) (*cinemaService.Ticket, error) {
 	var ticket cinemaService.Ticket
-	query := `SELECT t.id, t.session_id, s.start_time AS session_start_time, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id JOIN sessions s ON s.id = t.session_id WHERE t.id = $1 AND b.user_id = $2`
+	query := `SELECT t.id, t.session_id, s.start_time AS session_start_time, se.row_number, se.seat_number, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id JOIN sessions s ON s.id = t.session_id JOIN seats se ON se.id = t.seat_id WHERE t.id = $1 AND b.user_id = $2`
 	if err := r.postgresDB.GetContext(ctx, &ticket, query, ticketID, userID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, cinemaService.NewNotFoundError("ticket")

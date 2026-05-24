@@ -163,6 +163,13 @@ func (uc *useCase) GetSessionsByMovie(ctx context.Context, movieID int) ([]cinem
 	return uc.repo.GetSessionsByMovie(ctx, movieID)
 }
 
+func (uc *useCase) GetSessionsByHall(ctx context.Context, hallID int) ([]cinema.Session, error) {
+	if hallID <= 0 {
+		return nil, cinema.NewValidationError("hall id")
+	}
+	return uc.repo.GetSessionsByHall(ctx, hallID)
+}
+
 func (uc *useCase) CreateSession(ctx context.Context, req *cinema.CreateSessionRequest) (int, error) {
 	if req == nil {
 		return 0, cinema.ErrInvalidInput

@@ -60,6 +60,7 @@ func RegisterRouters(h *handler, tokenManager *authjwt.Manager) http.Handler {
 	// Seats and halls
 	r.Get("/halls/{id}", h.GetHallByID)
 	r.Get("/halls/{id}/seats", h.GetSeatsByHall)
+	r.Get("/halls/{id}/sessions", h.GetSessionsByHall)
 
 	r.Route("/sessions", func(r chi.Router) {
 		r.Get("/", h.GetAllSessions)

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
-	"time"
 
 	orderRepo "github.com/ElliAbby/go_cinema_system/internal/order/repository"
 	orderUseCase "github.com/ElliAbby/go_cinema_system/internal/order/usecase"

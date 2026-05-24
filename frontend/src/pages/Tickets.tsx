@@ -65,9 +65,10 @@ const TicketCard: React.FC<{ ticket: TicketType }> = ({ ticket }) => {
 
   const meta = statusMeta[ticket.status as TicketStatus] || statusMeta.used;
   const startTime = ticket.session_start_time || session?.start_time;
-  const seatLabel = ticket.seat_number
-    ? `Место ${ticket.seat_number}`
-    : `Место ${ticket.seat_id}`;
+  const seatLabel =
+    ticket.row_number && ticket.seat_number
+      ? `Ряд ${ticket.row_number}, место ${ticket.seat_number}`
+      : `Место ${ticket.seat_id}`;
 
   return (
     <article className="group rounded-3xl border border-white/8 bg-white/[0.03] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.22)] transition hover:border-white/12 hover:bg-white/[0.05]">
@@ -153,25 +154,46 @@ const Section: React.FC<{
   description: string;
   tickets: TicketType[];
   accent: string;
-}> = ({ title, description, tickets, accent }) => {
+  defaultOpen?: boolean;
+}> = ({ title, description, tickets, accent, defaultOpen }) => {
   if (tickets.length === 0) return null;
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-white">{title}</h2>
-          <p className="mt-1 text-sm text-gray-400">{description}</p>
-        </div>
-        <div className={`h-1.5 w-20 rounded-full ${accent}`} />
-      </div>
+    <details
+      className="group rounded-3xl border border-white/8 bg-white/[0.03] shadow-[0_18px_50px_rgba(0,0,0,0.18)] open:border-white/12"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer list-none px-5 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <span className={`h-2.5 w-2.5 rounded-full ${accent}`} />
+              <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                {title}
+              </h2>
+            </div>
+            <p className="mt-1 text-sm text-gray-400">{description}</p>
+          </div>
 
-      <div className="space-y-4">
-        {tickets.map((ticket) => (
-          <TicketCard key={ticket.id} ticket={ticket} />
-        ))}
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium text-gray-300">
+              {tickets.length}
+            </span>
+            <span className="text-gray-500 transition group-open:rotate-180">
+              ▾
+            </span>
+          </div>
+        </div>
+      </summary>
+
+      <div className="px-5 pb-5 sm:px-6">
+        <div className="max-h-[34rem] space-y-4 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          {tickets.map((ticket) => (
+            <TicketCard key={ticket.id} ticket={ticket} />
+          ))}
+        </div>
       </div>
-    </section>
+    </details>
   );
 };
 
@@ -276,12 +298,13 @@ export const Tickets: React.FC = () => {
               </div>
             </section>
 
-            <div className="space-y-10">
+            <div className="space-y-5">
               <Section
                 title="Активные билеты"
                 description="Билеты, которые уже оплачены и готовы к посещению сеанса."
                 tickets={activeTickets}
                 accent="bg-emerald-400"
+                defaultOpen
               />
               <Section
                 title="Отменённые билеты"

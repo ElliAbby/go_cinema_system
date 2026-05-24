@@ -1,6 +1,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMovie, useMovieSessions } from "../hooks/useMovies";
+import { useCinema, useHall } from "../hooks/useCinemas";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { getMoviePoster } from "../utils/moviePoster";
 
@@ -75,43 +76,64 @@ export const MovieDetail: React.FC = () => {
         ) : (
           <div className="grid gap-4">
             {sessions.map((session) => (
-              <div
+              <SessionCard
                 key={session.id}
-                className="bg-dark-800 border border-dark-700 rounded-lg p-6 hover:border-dark-600 transition"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <p className="text-lg font-semibold text-white">
-                      {new Date(session.start_time).toLocaleTimeString(
-                        "ru-RU",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {new Date(session.start_time).toLocaleDateString("ru-RU")}
-                    </p>
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <p className="text-2xl font-bold text-blue-400">
-                      {Math.round(session.price_base)} ₽
-                    </p>
-                    <p className="text-sm text-gray-400">Цена билета</p>
-                  </div>
-                  <button
-                    onClick={() => navigate(`/booking/${session.id}`)}
-                    disabled={session.available_seats === 0}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-medium rounded-lg transition"
-                  >
-                    Выбрать места
-                  </button>
-                </div>
-              </div>
+                session={session}
+                onBook={() => navigate(`/booking/${session.id}`)}
+              />
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+const SessionCard: React.FC<{
+  session: {
+    id: number;
+    hall_id: number;
+    start_time: string;
+    price_base: number;
+    available_seats?: number;
+  };
+  onBook: () => void;
+}> = ({ session, onBook }) => {
+  const { data: hall } = useHall(session.hall_id);
+  const { data: cinema } = useCinema(hall?.cinema_id ?? null);
+
+  return (
+    <div className="bg-dark-800 border border-dark-700 rounded-lg p-6 hover:border-dark-600 transition">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-lg font-semibold text-white">
+            {new Date(session.start_time).toLocaleTimeString("ru-RU", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+          <p className="text-sm text-gray-400">
+            {new Date(session.start_time).toLocaleDateString("ru-RU")}
+          </p>
+          <p className="text-sm text-gray-500">
+            {cinema?.name ?? "Кинотеатр"}
+            {hall?.name ? ` · ${hall.name}` : ""}
+          </p>
+          <p className="text-xs text-gray-500">{cinema?.address ?? ""}</p>
+        </div>
+        <div className="space-y-2 text-right">
+          <p className="text-2xl font-bold text-blue-400">
+            {Math.round(session.price_base)} ₽
+          </p>
+          <p className="text-sm text-gray-400">Цена билета</p>
+        </div>
+        <button
+          onClick={onBook}
+          disabled={session.available_seats === 0}
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-medium rounded-lg transition"
+        >
+          Выбрать места
+        </button>
       </div>
     </div>
   );

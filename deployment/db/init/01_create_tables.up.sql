@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS seats (
   hall_id INTEGER NOT NULL REFERENCES halls(id),
   row_number INTEGER NOT NULL,
   seat_number INTEGER NOT NULL,
-  seat_type VARCHAR(50)
+  seat_type VARCHAR(50) DEFAULT 'обычное',
+  UNIQUE (hall_id, row_number, seat_number)
 );
 
 CREATE TABLE IF NOT EXISTS movies (

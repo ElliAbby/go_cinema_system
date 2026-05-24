@@ -35,3 +35,12 @@ export const useHall = (id: number | null) => {
     staleTime: 5 * 60 * 1000,
   });
 };
+
+export const useHallSessions = (hallId: number | null) => {
+  return useQuery({
+    queryKey: ["hallSessions", hallId],
+    queryFn: () => cinemaApi.getHallSessions(hallId!),
+    enabled: !!hallId,
+    staleTime: 1 * 60 * 1000,
+  });
+};

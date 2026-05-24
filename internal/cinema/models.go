@@ -69,12 +69,14 @@ type Booking struct {
 
 // Ticket представляет билет
 type Ticket struct {
-	ID        string `json:"id" db:"id"`
-	SessionID int    `json:"session_id" db:"session_id"`
+	ID               string    `json:"id" db:"id"`
+	SessionID        int       `json:"session_id" db:"session_id"`
 	SessionStartTime time.Time `json:"session_start_time,omitempty" db:"session_start_time"`
-	SeatID    int    `json:"seat_id" db:"seat_id"`
-	BookingID string `json:"booking_id" db:"booking_id"`
-	Status    string `json:"status" db:"status"` // active, used, deactivated
+	RowNumber        int       `json:"row_number,omitempty" db:"row_number"`
+	SeatNumber       int       `json:"seat_number,omitempty" db:"seat_number"`
+	SeatID           int       `json:"seat_id" db:"seat_id"`
+	BookingID        string    `json:"booking_id" db:"booking_id"`
+	Status           string    `json:"status" db:"status"` // active, used, deactivated
 }
 
 // Reservation представляет временную фиксацию места перед покупкой

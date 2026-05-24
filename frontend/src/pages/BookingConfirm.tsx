@@ -8,6 +8,7 @@ import {
 import { useCinema, useHall } from "../hooks/useCinemas";
 import { useMovie } from "../hooks/useMovies";
 import { useSession } from "../hooks/useSessions";
+import { useSeatsByHall } from "../hooks/useSeats";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 
 export const BookingConfirm: React.FC = () => {
@@ -25,6 +26,7 @@ export const BookingConfirm: React.FC = () => {
   const { data: hall, isLoading: isHallLoading } = useHall(
     session?.hall_id ?? null,
   );
+  const { data: seats } = useSeatsByHall(hall?.id ?? null);
   const { data: cinema, isLoading: isCinemaLoading } = useCinema(
     hall?.cinema_id ?? null,
   );
@@ -119,6 +121,11 @@ export const BookingConfirm: React.FC = () => {
     }).format(date);
   };
 
+  const seatLabelById: Record<number, string> = {};
+  (seats || []).forEach((seat) => {
+    seatLabelById[seat.id] =
+      `Ряд ${seat.row_number}, место ${seat.seat_number}`;
+  });
   const seatNumbers = (booking.seat_ids || []).slice().sort((a, b) => a - b);
   const bookingDate = formatDate(booking.created_at);
   const sessionDate = formatDate(session?.start_time);
@@ -248,7 +255,7 @@ export const BookingConfirm: React.FC = () => {
                       key={seat}
                       className="rounded-lg border border-blue-400/30 bg-blue-500/15 px-3 py-1 text-sm font-medium text-blue-100"
                     >
-                      {seat}
+                      {seatLabelById[seat] ?? `Место ${seat}`}
                     </span>
                   ))}
                 </div>

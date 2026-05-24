@@ -50,6 +50,11 @@ export const cinemaApi = {
     return response.data || [];
   },
 
+  getHallSessions: async (hallId: number): Promise<Session[]> => {
+    const response = await client.get(`/halls/${hallId}/sessions`);
+    return response.data || [];
+  },
+
   // Seats
   getSeatsByHall: async (hallId: number): Promise<any[]> => {
     const response = await client.get(`/halls/${hallId}/seats`);

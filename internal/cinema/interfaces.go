@@ -83,6 +83,7 @@ type UseCase interface {
 	GetAllSessions(ctx context.Context) ([]Session, error)
 	GetSessionByID(ctx context.Context, id int) (*Session, error)
 	GetSessionsByMovie(ctx context.Context, movieID int) ([]Session, error)
+	GetSessionsByHall(ctx context.Context, hallID int) ([]Session, error)
 	CreateSession(ctx context.Context, req *CreateSessionRequest) (int, error)
 
 	// Бронирования и покупка

@@ -48,13 +48,21 @@ export const Booking: React.FC = () => {
 
   // build mapping from visual seatNumber -> DB seat id
   const seatIdMap: Record<number, number> = {};
+  const seatLabelById: Record<number, string> = {};
+  const hallRows =
+    seats && seats.length > 0
+      ? Math.max(...seats.map((seat: any) => seat.row_number || 0))
+      : 10;
+  const hallSeatsPerRow =
+    seats && seats.length > 0
+      ? Math.max(...seats.map((seat: any) => seat.seat_number || 0))
+      : 10;
+
   if (seats && seats.length > 0) {
-    const maxSeatPerRow = Math.max(
-      ...seats.map((s: any) => s.seat_number || 0),
-    );
     seats.forEach((s: any) => {
-      const seatNumber = (s.row_number - 1) * maxSeatPerRow + s.seat_number;
+      const seatNumber = (s.row_number - 1) * hallSeatsPerRow + s.seat_number;
       seatIdMap[seatNumber] = s.id;
+      seatLabelById[s.id] = `Ряд ${s.row_number}, место ${s.seat_number}`;
     });
   }
   const { mutate: createBooking, isPending: isCreating } = useCreateBooking();
@@ -186,8 +194,8 @@ export const Booking: React.FC = () => {
               Выберите места
             </h1>
             <SeatSelector
-              rows={10}
-              seatsPerRow={10}
+              rows={hallRows}
+              seatsPerRow={hallSeatsPerRow}
               selectedSeats={selectedSeats}
               onSeatClick={handleSeatClick}
               seatIdMap={seatIdMap}
@@ -238,7 +246,9 @@ export const Booking: React.FC = () => {
                             key={seatId}
                             className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
                           >
-                            {seatNumberById[seatId] ?? seatId}
+                            {seatLabelById[seatId] ??
+                              seatNumberById[seatId] ??
+                              seatId}
                           </span>
                         ));
                     })()}

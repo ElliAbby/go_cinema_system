@@ -325,6 +325,25 @@ func (h *handler) GetSessionsByMovie(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, sessions, http.StatusOK)
 }
 
+func (h *handler) GetSessionsByHall(w http.ResponseWriter, r *http.Request) {
+	hallID, err := getIDFromURL(r, "id")
+	if err != nil {
+		respondError(w, cinemaService.NewValidationError("hallId"), 400)
+		return
+	}
+
+	sessions, err := h.uc.GetSessionsByHall(r.Context(), hallID)
+	if err != nil {
+		if appErr, ok := err.(cinemaService.AppError); ok {
+			respondError(w, appErr, appErr.Status)
+		} else {
+			respondError(w, cinemaService.ErrInternal, 500)
+		}
+		return
+	}
+	respondJSON(w, sessions, http.StatusOK)
+}
+
 func (h *handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	var req cinemaService.CreateSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
