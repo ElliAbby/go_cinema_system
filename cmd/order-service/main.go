@@ -66,7 +66,7 @@ func main() {
 		log.Fatalf("Worker error: %v", err)
 	}
 
-	shutDownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutDownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	if err := metricsServer.Shutdown(shutDownCtx); err != nil {
 		log.Printf("Metrics server shutdown error: %v", err)

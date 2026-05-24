@@ -52,6 +52,7 @@ type Config struct {
 type WorkerConfig struct {
 	DB          DBConfig
 	Kafka       KafkaConfig
+	ShutdownTimeout time.Duration
 	MetricsAddr string
 }
 
@@ -97,6 +98,10 @@ func LoadWorkerConfig() (WorkerConfig, error) {
 	}
 
 	cfg.Kafka, err = LoadKafkaConfig()
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	cfg.ShutdownTimeout, err = getDurationEnv("APP_SHUTDOWN_TIMEOUT")
 	if err != nil {
 		return WorkerConfig{}, err
 	}

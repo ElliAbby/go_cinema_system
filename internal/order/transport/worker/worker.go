@@ -61,7 +61,9 @@ func (w *Worker) Start(ctx context.Context) error {
 
 		metrics.IncKafkaMessagesReceived(w.topic)
 
-		if err := handlePaymentMessage(ctx, w.topic, w.serviceName, w.uc, msg.Value); err != nil {
+		processCtx := context.Background()
+
+		if err := handlePaymentMessage(processCtx, w.topic, w.serviceName, w.uc, msg.Value); err != nil {
 			log.Printf("Payment message processing error: %v", err)
 			metrics.IncKafkaMessagesFailed(w.topic, "processing_error")
 			continue
@@ -69,7 +71,7 @@ func (w *Worker) Start(ctx context.Context) error {
 
 		metrics.IncKafkaMessagesProcessed(w.topic)
 
-		if err := w.reader.CommitMessages(ctx, msg); err != nil {
+		if err := w.reader.CommitMessages(processCtx, msg); err != nil {
 			log.Printf("Kafka commit error: %v", err)
 			metrics.IncKafkaConsumerErrors(w.topic, "commit_error")
 		}
