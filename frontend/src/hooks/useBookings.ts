@@ -59,6 +59,8 @@ export const useTickets = () => {
   return useQuery({
     queryKey: ["tickets"],
     queryFn: () => bookingApi.getTickets(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };

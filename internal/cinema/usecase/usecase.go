@@ -297,8 +297,8 @@ func (uc *useCase) CancelBooking(ctx context.Context, userID int, bookingID stri
 		metrics.IncBookingErrors("cancel_booking_failed")
 		return nil, err
 	}
-	if booking.Status != "pending" {
-		return nil, cinema.NewConflictError("only pending bookings can be cancelled")
+	if booking.Status != "pending" && booking.Status != "paid" {
+		return nil, cinema.NewConflictError("only pending or paid bookings can be cancelled")
 	}
 
 	if err := uc.repo.CancelBooking(ctx, userID, bookingID); err != nil {
@@ -419,9 +419,19 @@ func (uc *useCase) GetMe(ctx context.Context, userID int) (*cinema.User, error) 
 }
 
 // Билеты
+// func (uc *useCase) RefreshExpiredTickets(ctx context.Context, userID int) error {
+// 	if userID <= 0 {
+// 		return cinema.NewValidationError("user id")
+// 	}
+// 	return uc.repo.RefreshExpiredTickets(ctx, userID)
+// }
+
 func (uc *useCase) ListTickets(ctx context.Context, userID int) ([]cinema.Ticket, error) {
 	if userID <= 0 {
 		return nil, cinema.NewValidationError("user id")
+	}
+	if err := uc.repo.RefreshExpiredTickets(ctx, userID); err != nil {
+		return nil, err
 	}
 	return uc.repo.GetAllTickets(ctx, userID)
 }

@@ -72,11 +72,12 @@ export const BookingConfirm: React.FC = () => {
   };
 
   const handleCancel = () => {
-    if (
-      !window.confirm(
-        "Отменить это бронирование? Несохраненные места будут освобождены.",
-      )
-    ) {
+    const cancellationMessage =
+      booking.status === "paid"
+        ? "Отменить это оплаченное бронирование? Билеты будут деактивированы, а места освободятся."
+        : "Отменить это бронирование? Несохраненные места будут освобождены.";
+
+    if (!window.confirm(cancellationMessage)) {
       return;
     }
 
@@ -264,24 +265,30 @@ export const BookingConfirm: React.FC = () => {
                 </p>
               </div>
 
-              {booking.status === "pending" && (
+              {(booking.status === "pending" || booking.status === "paid") && (
                 <div className="space-y-3 pt-2">
-                  <button
-                    onClick={handlePayment}
-                    disabled={isProcessing}
-                    className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
-                  >
-                    {isProcessing || isPaying
-                      ? "Обработка платежа..."
-                      : "Оплатить"}
-                  </button>
+                  {booking.status === "pending" && (
+                    <button
+                      onClick={handlePayment}
+                      disabled={isProcessing}
+                      className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
+                    >
+                      {isProcessing || isPaying
+                        ? "Обработка платежа..."
+                        : "Оплатить"}
+                    </button>
+                  )}
 
                   <button
                     onClick={handleCancel}
                     disabled={isCancelling || isProcessing || isPaying}
                     className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-semibold text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:bg-red-500/5"
                   >
-                    {isCancelling ? "Отмена..." : "Отменить бронирование"}
+                    {isCancelling
+                      ? "Отмена..."
+                      : booking.status === "paid"
+                        ? "Отменить и деактивировать билеты"
+                        : "Отменить бронирование"}
                   </button>
                 </div>
               )}

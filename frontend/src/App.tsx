@@ -15,6 +15,7 @@ import { CinemaDetail } from "./pages/CinemaDetail";
 import { Booking } from "./pages/Booking";
 import { BookingConfirm } from "./pages/BookingConfirm";
 import { Bookings } from "./pages/Bookings";
+import { Tickets } from "./pages/Tickets";
 import { Profile } from "./pages/Profile";
 import { ProtectedRoute } from "./pages/ProtectedRoute";
 
@@ -52,6 +53,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets"
+              element={
+                <ProtectedRoute>
+                  <Tickets />
                 </ProtectedRoute>
               }
             />

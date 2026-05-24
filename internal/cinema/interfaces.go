@@ -51,6 +51,7 @@ type Repository interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
 
 	// Билеты
+	RefreshExpiredTickets(ctx context.Context, userID int) error
 	GetAllTickets(ctx context.Context, userID int) ([]Ticket, error)
 	GetTicketByID(ctx context.Context, userID int, ticketID int) (*Ticket, error)
 

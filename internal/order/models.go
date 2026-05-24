@@ -12,7 +12,7 @@ type Ticket struct {
 	SessionID int    `json:"session_id" db:"session_id"`
 	SeatID    int    `json:"seat_id" db:"seat_id"`
 	BookingID string `json:"booking_id" db:"booking_id"`
-	Status    string `json:"status" db:"status"`
+	Status    string `json:"status" db:"status"` // active, used, deactivated
 }
 
 type Reservation struct {

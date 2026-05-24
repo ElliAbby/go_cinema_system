@@ -44,6 +44,14 @@ export const Navbar: React.FC = () => {
             )}
             {isAuthenticated && (
               <Link
+                to="/tickets"
+                className="text-gray-300 hover:text-white transition"
+              >
+                Мои билеты
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link
                 to="/profile"
                 className="text-gray-300 hover:text-white transition"
               >

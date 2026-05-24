@@ -25,7 +25,7 @@ Table Movies {
   id integer [primary key]
   title varchar
   duration integer // длительность в минутах
-  rating varchar // PG-13, R, и т.д.
+  rating varchar 
   description text
 }
 
@@ -60,7 +60,7 @@ Table Tickets {
   session_id integer [ref: > Sessions.id]
   seat_id integer [ref: > Seats.id]
   booking_id integer [ref: > Bookings.id]
-  status varchar // active, used, refunded
+  status varchar // active, used, deactivated
 
   indexes {
     (session_id, seat_id) [unique]

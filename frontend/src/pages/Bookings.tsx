@@ -57,7 +57,8 @@ export const Bookings: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => {
-              const isPending = booking.status === "pending";
+              const canCancel =
+                booking.status === "pending" || booking.status === "paid";
 
               return (
                 <div
@@ -97,7 +98,7 @@ export const Bookings: React.FC = () => {
                         {booking.status === "paid" && "✓ Оплачено"}
                         {booking.status === "cancelled" && "✗ Отменено"}
                       </div>
-                      {isPending && (
+                      {canCancel && (
                         <button
                           onClick={(event) => handleCancel(booking.id, event)}
                           disabled={isCancelling}

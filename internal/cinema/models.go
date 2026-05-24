@@ -74,7 +74,7 @@ type Ticket struct {
 	SessionStartTime time.Time `json:"session_start_time,omitempty" db:"session_start_time"`
 	SeatID    int    `json:"seat_id" db:"seat_id"`
 	BookingID string `json:"booking_id" db:"booking_id"`
-	Status    string `json:"status" db:"status"` // active, used, refunded
+	Status    string `json:"status" db:"status"` // active, used, deactivated
 }
 
 // Reservation представляет временную фиксацию места перед покупкой

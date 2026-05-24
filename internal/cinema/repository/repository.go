@@ -252,7 +252,7 @@ func (r *repo) CreateBooking(ctx context.Context, userID int, req *cinemaService
 		SELECT t.seat_id
 		FROM tickets t
 		JOIN bookings b ON b.id = t.booking_id
-		WHERE t.session_id = $1 AND b.status IN ('pending', 'paid') AND t.seat_id = ANY($2)
+		WHERE t.session_id = $1 AND b.status IN ('pending', 'paid') AND t.status <> 'deactivated' AND t.seat_id = ANY($2)
 	) occupied
 	ORDER BY seat_id
 	`
@@ -370,15 +370,15 @@ func (r *repo) CancelBooking(ctx context.Context, userID int, bookingID string) 
 		return cinemaService.NewDatabaseError(err.Error())
 	}
 
-	if status != "pending" {
-		return cinemaService.NewConflictError("only pending bookings can be cancelled")
+	if status != "pending" && status != "paid" {
+		return cinemaService.NewConflictError("only pending or paid bookings can be cancelled")
 	}
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM reservations WHERE booking_id = $1`, bookingID); err != nil {
 		return cinemaService.NewDatabaseError(err.Error())
 	}
 
-	if _, err := tx.ExecContext(ctx, `UPDATE tickets SET status = 'refunded' WHERE booking_id = $1`, bookingID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE tickets SET status = 'deactivated' WHERE booking_id = $1`, bookingID); err != nil {
 		return cinemaService.NewDatabaseError(err.Error())
 	}
 
@@ -434,7 +434,7 @@ func (r *repo) GetReservedSeatIDsBySession(ctx context.Context, sessionID int) (
 		SELECT t.seat_id
 		FROM tickets t
 		JOIN bookings b ON b.id = t.booking_id
-		WHERE t.session_id = $1 AND b.status IN ('pending', 'paid')
+		WHERE t.session_id = $1 AND b.status IN ('pending', 'paid') AND t.status <> 'deactivated'
 	) t
 	ORDER BY seat_id
 	`
@@ -505,6 +505,26 @@ func (r *repo) GetAllUsers(ctx context.Context) ([]cinemaService.User, error) {
 }
 
 // Работа с билетами
+func (r *repo) RefreshExpiredTickets(ctx context.Context, userID int) error {
+	query := `
+		UPDATE tickets
+		SET status = 'used'
+		WHERE status = 'active'
+		  AND EXISTS (
+			SELECT 1
+			FROM bookings b
+			JOIN sessions s ON s.id = tickets.session_id
+			WHERE b.id = tickets.booking_id
+			  AND b.user_id = $1
+			  AND b.status <> 'cancelled'
+			  AND s.start_time <= NOW()
+		  )`
+	if _, err := r.postgresDB.ExecContext(ctx, query, userID); err != nil {
+		return cinemaService.NewDatabaseError(err.Error())
+	}
+	return nil
+}
+
 func (r *repo) GetAllTickets(ctx context.Context, userID int) ([]cinemaService.Ticket, error) {
 	var tickets []cinemaService.Ticket
 	query := `SELECT t.id, t.session_id, s.start_time AS session_start_time, t.seat_id, t.booking_id, t.status FROM tickets t JOIN bookings b ON b.id = t.booking_id JOIN sessions s ON s.id = t.session_id WHERE b.user_id = $1 ORDER BY t.id`
